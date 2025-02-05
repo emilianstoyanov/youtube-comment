@@ -1,6 +1,6 @@
 import logging
 from telegram import Update
-from telegram.ext import Updater, CommandHandler, CallbackContext
+from telegram.ext import Application, CommandHandler, CallbackContext
 import psycopg2
 import os
 
@@ -97,18 +97,16 @@ def start(update: Update, context: CallbackContext) -> None:
 
 # Основна функция за инициализиране на бота
 def main() -> None:
-    updater = Updater(TELEGRAM_TOKEN)
-
-    dispatcher = updater.dispatcher
+    # Използваме новия Application клас за инициализиране на бота
+    application = Application.builder().token(TELEGRAM_TOKEN).build()
 
     # Добавяне на командите
-    dispatcher.add_handler(CommandHandler("start", start))
-    dispatcher.add_handler(CommandHandler("add_channel", add_channel))
-    dispatcher.add_handler(CommandHandler("add_video", add_video))
+    application.add_handler(CommandHandler("start", start))
+    application.add_handler(CommandHandler("add_channel", add_channel))
+    application.add_handler(CommandHandler("add_video", add_video))
 
     # Стартиране на бота
-    updater.start_polling()
-    updater.idle()
+    application.run_polling()
 
 
 if __name__ == '__main__':

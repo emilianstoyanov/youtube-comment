@@ -92,7 +92,10 @@ async def add_video(update: Update, context: CallbackContext) -> None:
 async def start(update: Update, context: CallbackContext) -> None:
     user_name = update.message.from_user.first_name
     await update.message.reply_text(
-        f'Здравей, {user_name}! Използвай командите /add_channel <канал_url> и /add_video <видео_url>.')
+        f'Здравей, {user_name}! \n'
+        f'Използвай следните команди: \n'
+        f'1. За добавяне на URL на Youtube канал: /add_channel <канал_url>  \n'
+        f'2. За добавяне на URL на видео: /add_video <видео_url>')
 
 
 # Основна функция за инициализиране на бота

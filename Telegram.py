@@ -23,7 +23,7 @@ def connect_db():
 
 
 # Функция за добавяне на канал
-def add_channel(update: Update, context: CallbackContext) -> None:
+async def add_channel(update: Update, context: CallbackContext) -> None:
     if len(context.args) > 1:
         channel_name = context.args[0]
         channel_url = context.args[1]
@@ -45,14 +45,14 @@ def add_channel(update: Update, context: CallbackContext) -> None:
             cursor.close()
             conn.close()
 
-            update.message.reply_text(f"Каналът {channel_name} ({channel_url}) беше добавен успешно!")
+            await update.message.reply_text(f"Каналът {channel_name} ({channel_url}) беше добавен успешно!")
         except Exception as e:
-            update.message.reply_text(f"Грешка при добавяне на канала: {e}")
+            await update.message.reply_text(f"Грешка при добавяне на канала: {e}")
     else:
-        update.message.reply_text("Моля, добавете име на канала и URL.")
+        await update.message.reply_text("Моля, добавете име на канала и URL.")
 
 
-def add_video(update: Update, context: CallbackContext) -> None:
+async def add_video(update: Update, context: CallbackContext) -> None:
     if len(context.args) > 1:
         video_url = context.args[0]
         channel_url = context.args[1]
@@ -75,23 +75,23 @@ def add_video(update: Update, context: CallbackContext) -> None:
                 """, (channel_id, video_url))
                 conn.commit()
 
-                update.message.reply_text(f"Видео {video_url} беше добавено успешно!")
+                await update.message.reply_text(f"Видео {video_url} беше добавено успешно!")
             else:
-                update.message.reply_text("Каналът не съществува в базата.")
+                await update.message.reply_text("Каналът не съществува в базата.")
 
             cursor.close()
             conn.close()
 
         except Exception as e:
-            update.message.reply_text(f"Грешка при добавяне на видеото: {e}")
+            await update.message.reply_text(f"Грешка при добавяне на видеото: {e}")
     else:
-        update.message.reply_text("Моля, добавете URL на видеото и на канала.")
+        await update.message.reply_text("Моля, добавете URL на видеото и на канала.")
 
 
 # Функция за стартиране на бота
-def start(update: Update, context: CallbackContext) -> None:
+async def start(update: Update, context: CallbackContext) -> None:
     user_name = update.message.from_user.first_name
-    update.message.reply_text(
+    await update.message.reply_text(
         f'Здравей, {user_name}! Използвай командите /add_channel <канал_url> и /add_video <видео_url>.')
 
 

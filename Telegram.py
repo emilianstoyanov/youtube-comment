@@ -3,6 +3,7 @@ from telegram import Update
 from telegram.ext import Application, CommandHandler, CallbackContext
 import psycopg2
 import os
+import uuid
 
 # Настройка на логове
 logging.basicConfig(format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
@@ -49,7 +50,8 @@ async def add_channel(update: Update, context: CallbackContext) -> None:
         except Exception as e:
             await update.message.reply_text(f"Грешка при добавяне на канала: {e}")
     else:
-        await update.message.reply_text("Моля, добавете име на канала и URL.")
+        await update.message.reply_text("Моля, добавете име на канала и URL.\n"
+                                        "Във фомат: /add_channel human https://www.youtube.com/@human")
 
 
 async def add_video(update: Update, context: CallbackContext) -> None:
@@ -69,10 +71,14 @@ async def add_video(update: Update, context: CallbackContext) -> None:
             if result:
                 channel_id = result[0]
                 # Добавяне на видеото в базата
+                # Генерираме уникален video_id (например чрез UUID)
+                video_id = str(uuid.uuid4())
+
+                # Добавяне на видеото в базата
                 cursor.execute("""
-                    INSERT INTO videos (channel_id, video_url)
-                    VALUES (%s, %s)
-                """, (channel_id, video_url))
+                                   INSERT INTO videos (channel_id, video_url, video_id)
+                                   VALUES (%s, %s, %s)
+                               """, (channel_id, video_url, video_id))
                 conn.commit()
 
                 await update.message.reply_text(f"Видео {video_url} беше добавено успешно!")
@@ -85,7 +91,9 @@ async def add_video(update: Update, context: CallbackContext) -> None:
         except Exception as e:
             await update.message.reply_text(f"Грешка при добавяне на видеото: {e}")
     else:
-        await update.message.reply_text("Моля, добавете URL на видеото и на канала.")
+        await update.message.reply_text("Моля, добавете URL на видеото и на канала.\n"
+                                        "Във фомат: /add_video https://www.youtube.com/watch?v=dQwф45х9WgXcQ "
+                                        "https://www.youtube.com/@HUMAN")
 
 
 # Функция за стартиране на бота
@@ -95,7 +103,10 @@ async def start(update: Update, context: CallbackContext) -> None:
         f'Здравей, {user_name}! \n'
         f'Използвай следните команди: \n'
         f'1. За добавяне на URL на Youtube канал: /add_channel <канал_url>  \n'
-        f'2. За добавяне на URL на видео: /add_video <видео_url>')
+        f'-Във формат: /add_channel human https://www.youtube.com/@human'
+        f'2. За добавяне на URL на видео: /add_video <видео_url> \n'
+        f'-Във формат: /add_video https://www.youtube.com/watch?v=dQwф45х9WgXcQ '
+        f'"https://www.youtube.com/@HUMAN')
 
 
 # Основна функция за инициализиране на бота

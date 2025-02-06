@@ -3,7 +3,7 @@ from telegram import Update
 from telegram.ext import Application, CommandHandler, CallbackContext
 import psycopg2
 import os
-import uuid
+import re
 
 # Настройка на логове
 logging.basicConfig(format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
@@ -73,11 +73,20 @@ async def add_video(update: Update, context: CallbackContext) -> None:
 
     if len(context.args) < 2:
         await update.message.reply_text(
-            "⚠️ Моля, добавете URL на видеото и канала! 📌 Пример: `/add_video https://www.youtube.com/watch?v=xyz123 https://www.youtube.com/@Example`")
+            "⚠️ Моля, добавете **URL на видеото** и **URL на канала**! 📌 Пример: `/add_video https://www.youtube.com/watch?v=yszrl5SmFlA https://www.youtube.com/@Example`")
         return
 
     video_url = context.args[0]
     channel_url = context.args[1]
+
+    # ✅ Извличаме video_id от линка
+    video_id_match = re.search(r"v=([a-zA-Z0-9_-]{11})", video_url)
+    if not video_id_match:
+        await update.message.reply_text(
+            "❌ Невалиден YouTube линк! Уверете се, че използвате стандартен формат: `https://www.youtube.com/watch?v=VIDEO_ID`")
+        return
+
+    video_id = video_id_match.group(1)  # Взимаме ID-то от URL-а
 
     try:
         conn = connect_db()
@@ -100,14 +109,14 @@ async def add_video(update: Update, context: CallbackContext) -> None:
         if result:
             channel_id = result[0]
 
-            # Добавяне на видеото с user_id
+            # ✅ Вкарваме и video_id в базата
             cursor.execute("""
-                INSERT INTO videos (user_id, channel_id, video_url)
-                VALUES (%s, %s, %s)
-            """, (user_id, channel_id, video_url))
+                INSERT INTO videos (user_id, channel_id, video_url, video_id)
+                VALUES (%s, %s, %s, %s)
+            """, (user_id, channel_id, video_url, video_id))
             conn.commit()
 
-            await update.message.reply_text(f"🎬 Видео [{video_url}]({video_url}) беше добавено успешно!",
+            await update.message.reply_text(f"🎬 Видео [{video_id}]({video_url}) беше добавено успешно!",
                                             parse_mode="Markdown", disable_web_page_preview=True)
         else:
             await update.message.reply_text("⚠️ Каналът не съществува в базата или не ти принадлежи!")

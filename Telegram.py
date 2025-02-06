@@ -46,7 +46,12 @@ async def add_channel(update: Update, context: CallbackContext) -> None:
             cursor.close()
             conn.close()
 
-            await update.message.reply_text(f"Каналът {channel_name} ({channel_url}) беше добавен успешно!")
+            await update.message.reply_text(
+                f"✅ Каналът [{channel_name}]({channel_url}) беше добавен успешно!",
+                parse_mode="Markdown",
+                disable_web_page_preview=True
+            )
+
         except Exception as e:
             await update.message.reply_text(f"Грешка при добавяне на канала: {e}")
     else:
@@ -81,7 +86,12 @@ async def add_video(update: Update, context: CallbackContext) -> None:
                                """, (channel_id, video_url, video_id))
                 conn.commit()
 
-                await update.message.reply_text(f"Видео {video_url} беше добавено успешно!")
+                await update.message.reply_text(
+                    f"🎬 Видео [линк]({video_url}) беше добавено успешно!",
+                    parse_mode="Markdown",
+                    disable_web_page_preview=True
+                )
+
             else:
                 await update.message.reply_text("Каналът не съществува в базата.")
 

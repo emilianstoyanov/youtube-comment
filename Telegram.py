@@ -124,6 +124,7 @@ async def list_channels(update: Update, context: CallbackContext) -> None:
     except Exception as e:
         await update.message.reply_text(f"⚠️ Грешка при извличане на каналите: {e}")
 
+
 async def list_videos(update: Update, context: CallbackContext) -> None:
     try:
         # Свързване към базата
@@ -160,21 +161,30 @@ async def list_videos(update: Update, context: CallbackContext) -> None:
 # Функция за стартиране на бота
 async def start(update: Update, context: CallbackContext) -> None:
     user_name = update.message.from_user.first_name
-    await update.message.reply_text(
-        f'Здравей, {user_name}!\n\n'
-        f'Използвай следните команди:\n\n'
-        f'1. За добавяне на URL на Youtube канал:\n'
-        f'   /add_channel <url име на канала> <url на канала> \n\n'
-
-        f'2. За добавяне на URL на видео:\n'
-        f'   /add_video <url на видеото> <url на канала> \n\n'
-
-        f'3. За листване на всички добавени канали:\n'
-        f'   /list_channels'
-
-        f'4. За листване на всички добавени видеа:\n'
-        f'   /list_videos'
+    message = (
+        f"👋 **Здравей, {user_name}!**\n\n"
+        f"Добре дошъл в YouTube Comment Bot! 🎥\n"
+        f"ℹ️ Използвай командата `/help`, за да видиш всички възможности на бота."
     )
+
+    await update.message.reply_text(message, parse_mode="Markdown")
+
+
+async def help_command(update: Update, context: CallbackContext) -> None:
+    message = (
+        f"💡 **Команди, които можеш да използваш:**\n\n"
+        f"📌 **Добавяне на канал:**\n"
+        f"   `/add_channel`  *<име на канала> <URL на канала>*\n\n"
+        f"🎬 **Добавяне на видео:**\n"
+        f"   `/add_video`  *<URL на видеото> <URL на канала>*\n\n"
+        f"📂 **Листване на канали:**\n"
+        f"   `/list_channels`\n\n"
+        f"📜 **Листване на видеа:**\n"
+        f"   `/list_videos`\n\n"
+        f"🔍 **Още функции скоро...**"
+    )
+
+    await update.message.reply_text(message, parse_mode="Markdown", disable_web_page_preview=True)
 
 
 # Основна функция за инициализиране на бота
@@ -188,6 +198,7 @@ def main() -> None:
     application.add_handler(CommandHandler("add_video", add_video))
     application.add_handler(CommandHandler("list_channels", list_channels))
     application.add_handler(CommandHandler("list_videos", list_videos))
+    application.add_handler(CommandHandler("help", help_command))
 
     # Стартиране на бота
     application.run_polling()

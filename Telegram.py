@@ -4,6 +4,7 @@ from telegram.ext import Application, CommandHandler, CallbackContext
 import psycopg2
 import os
 import uuid
+import yt_dlp
 
 # Настройка на логове
 logging.basicConfig(format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
@@ -58,7 +59,7 @@ async def add_channel(update: Update, context: CallbackContext) -> None:
         await update.message.reply_text("Моля, добавете име на канала и URL.\n"
                                         "Във фомат: /add_channel human https://www.youtube.com/@human")
 
-
+# Функция за добавяне на видео
 async def add_video(update: Update, context: CallbackContext) -> None:
     if len(context.args) > 1:
         video_url = context.args[0]
@@ -75,19 +76,24 @@ async def add_video(update: Update, context: CallbackContext) -> None:
 
             if result:
                 channel_id = result[0]
-                # Добавяне на видеото в базата
+
+                # Използваме yt-dlp за извличане на информация за видеото
+                with yt_dlp.YoutubeDL() as ydl:
+                    info_dict = ydl.extract_info(video_url, download=False)
+                    video_title = info_dict.get('title', 'Няма заглавие')  # Вземаме заглавието на видеото
+
                 # Генерираме уникален video_id (например чрез UUID)
                 video_id = str(uuid.uuid4())
 
                 # Добавяне на видеото в базата
                 cursor.execute("""
-                                   INSERT INTO videos (channel_id, video_url, video_id)
-                                   VALUES (%s, %s, %s)
-                               """, (channel_id, video_url, video_id))
+                                   INSERT INTO videos (channel_id, video_url, video_id, video_title)
+                                   VALUES (%s, %s, %s, %s)
+                               """, (channel_id, video_url, video_id, video_title))
                 conn.commit()
 
                 await update.message.reply_text(
-                    f"🎬 Видео [линк]({video_url}) беше добавено успешно!",
+                    f"🎬 Видео \"{video_title}\" беше добавено успешно!",
                     parse_mode="Markdown",
                     disable_web_page_preview=True
                 )
@@ -102,7 +108,7 @@ async def add_video(update: Update, context: CallbackContext) -> None:
             await update.message.reply_text(f"Грешка при добавяне на видеото: {e}")
     else:
         await update.message.reply_text("Моля, добавете URL на видеото и на канала.\n"
-                                        "Във фомат: /add_video https://www.youtube.com/watch?v=dQwф45х9WgXcQ "
+                                        "Във формат: /add_video https://www.youtube.com/watch?v=dQw4w9WgXcQ "
                                         "https://www.youtube.com/@HUMAN")
 
 

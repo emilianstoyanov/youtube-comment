@@ -96,6 +96,28 @@ async def add_video(update: Update, context: CallbackContext) -> None:
                                         "https://www.youtube.com/@HUMAN")
 
 
+# Функция за показване на всички канали
+async def list_channels(update: Update, context: CallbackContext) -> None:
+    try:
+        conn = connect_db()
+        cursor = conn.cursor()
+
+        cursor.execute("SELECT channel_name, channel_url FROM channels")
+        channels = cursor.fetchall()
+
+        cursor.close()
+        conn.close()
+
+        if channels:
+            response = "\n".join([f"{name} - {url}" for name, url in channels])
+        else:
+            response = "Няма добавени канали."
+
+        await update.message.reply_text(response)
+    except Exception as e:
+        await update.message.reply_text(f"Грешка при извличане на каналите: {e}")
+
+
 # Функция за стартиране на бота
 async def start(update: Update, context: CallbackContext) -> None:
     user_name = update.message.from_user.first_name
@@ -119,6 +141,7 @@ def main() -> None:
     application.add_handler(CommandHandler("start", start))
     application.add_handler(CommandHandler("add_channel", add_channel))
     application.add_handler(CommandHandler("add_video", add_video))
+    application.add_handler(CommandHandler("list_channels", list_channels))
 
     # Стартиране на бота
     application.run_polling()

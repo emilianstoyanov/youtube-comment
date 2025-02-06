@@ -99,23 +99,30 @@ async def add_video(update: Update, context: CallbackContext) -> None:
 # Функция за показване на всички канали
 async def list_channels(update: Update, context: CallbackContext) -> None:
     try:
+        # Свързване към базата
         conn = connect_db()
         cursor = conn.cursor()
 
+        # Извличане на всички канали
         cursor.execute("SELECT channel_name, channel_url FROM channels")
         channels = cursor.fetchall()
 
         cursor.close()
         conn.close()
 
-        if channels:
-            response = "\n".join([f"{name} - {url}" for name, url in channels])
-        else:
-            response = "Няма добавени канали."
+        if not channels:
+            await update.message.reply_text("❌ Няма добавени канали.")
+            return
 
-        await update.message.reply_text(response)
+        # Генериране на съобщението във формат Markdown
+        message = "**📌 Добавени канали:**\n\n"
+        for index, (name, url) in enumerate(channels, start=1):
+            message += f"➤ **{index}. [{name}]({url})**\n"
+
+        await update.message.reply_text(message, parse_mode="Markdown", disable_web_page_preview=True)
+
     except Exception as e:
-        await update.message.reply_text(f"Грешка при извличане на каналите: {e}")
+        await update.message.reply_text(f"⚠️ Грешка при извличане на каналите: {e}")
 
 
 # Функция за стартиране на бота

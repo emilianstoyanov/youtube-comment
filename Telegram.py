@@ -128,7 +128,10 @@ async def start(update: Update, context: CallbackContext) -> None:
         f'   /add_channel <url име на канала> <url на канала> \n\n'
 
         f'2. За добавяне на URL на видео:\n'
-        f'   /add_video <url на видеото> <url на канала>'
+        f'   /add_video <url на видеото> <url на канала> \n\n'
+
+        f'3. За листване на всички добавени канали и видеа:\n'
+        f'   /list_channels'
     )
 
 

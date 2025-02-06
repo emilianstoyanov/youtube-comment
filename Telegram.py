@@ -28,12 +28,13 @@ async def add_channel(update: Update, context: CallbackContext) -> None:
     user_id = update.message.from_user.id
     username = update.message.from_user.username
 
-    if len(context.args) < 1:
+    if len(context.args) < 2:
         await update.message.reply_text(
-            "⚠️ Моля, добавете URL на канала! 📌 Пример: `/add_channel https://www.youtube.com/@Example`")
+            "⚠️ Моля, добавете **име на канала** и **URL на канала**! 📌 Пример: `/add_channel KreteKlizmi https://www.youtube.com/@KreteKlizmi`")
         return
 
-    channel_url = context.args[0]
+    channel_name = context.args[0]  # Името на канала
+    channel_url = context.args[1]  # Линк към канала
 
     try:
         conn = connect_db()
@@ -49,15 +50,17 @@ async def add_channel(update: Update, context: CallbackContext) -> None:
             user_id = cursor.fetchone()[0]
             conn.commit()
 
-        # Добавяне на канал с user_id
-        cursor.execute("INSERT INTO channels (user_id, channel_url) VALUES (%s, %s)",
-                       (user_id, channel_url))
+        # ✅ Поправена SQL заявка - добавяме channel_name и user_id
+        cursor.execute("INSERT INTO channels (channel_name, channel_url, user_id) VALUES (%s, %s, %s)",
+                       (channel_name, channel_url, user_id))
         conn.commit()
 
         cursor.close()
         conn.close()
 
-        await update.message.reply_text(f"✅ Каналът **{channel_url}** беше добавен успешно!", parse_mode="Markdown")
+        await update.message.reply_text(
+            f"✅ Каналът **{channel_name}** беше добавен успешно!\n🔗 [Линк към канала]({channel_url})",
+            parse_mode="Markdown", disable_web_page_preview=True)
 
     except Exception as e:
         await update.message.reply_text(f"❌ Грешка при добавяне на канала: {e}")

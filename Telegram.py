@@ -198,6 +198,75 @@ async def help_command(update: Update, context: CallbackContext) -> None:
     await update.message.reply_text(message, parse_mode="Markdown", disable_web_page_preview=True)
 
 
+# Функция за добавяне на ключови думи на потребителя
+async def add_keyword(update: Update, context: CallbackContext) -> None:
+    user_id = update.message.from_user.id  # ID на потребителя
+    username = update.message.from_user.username  # Telegram username (по избор)
+
+    if len(context.args) < 1:
+        await update.message.reply_text("⚠️ Моля, въведи ключова дума! 📌 Пример: `/add_keyword scam`")
+        return
+
+    keyword = context.args[0].lower()
+
+    try:
+        conn = connect_db()
+        cursor = conn.cursor()
+
+        # Проверка дали потребителят съществува
+        cursor.execute("SELECT id FROM users WHERE telegram_id = %s", (user_id,))
+        user = cursor.fetchone()
+
+        if not user:
+            # Ако потребителят не съществува, го добавяме в `users`
+            cursor.execute("INSERT INTO users (telegram_id, username) VALUES (%s, %s) RETURNING id",
+                           (user_id, username))
+            user_id = cursor.fetchone()[0]
+            conn.commit()
+
+        # Добавяне на ключовата дума в `keywords`
+        cursor.execute("INSERT INTO keywords (user_id, keyword) VALUES (%s, %s)", (user_id, keyword))
+        conn.commit()
+
+        cursor.close()
+        conn.close()
+
+        await update.message.reply_text(f"✅ Ключовата дума **'{keyword}'** беше добавена успешно!",
+                                        parse_mode="Markdown")
+
+    except Exception as e:
+        await update.message.reply_text(f"❌ Грешка при добавяне на ключовата дума: {e}")
+
+
+# Функция за листване на добавените ключови думи на потребителя
+async def list_keywords(update: Update, context: CallbackContext) -> None:
+    user_id = update.message.from_user.id  # ID на потребителя
+
+    try:
+        conn = connect_db()
+        cursor = conn.cursor()
+
+        # Взимаме всички ключови думи на потребителя
+        cursor.execute("SELECT keyword FROM keywords WHERE user_id = %s", (user_id,))
+        keywords = cursor.fetchall()
+
+        cursor.close()
+        conn.close()
+
+        if not keywords:
+            await update.message.reply_text("⚠️ Все още нямаш добавени ключови думи.")
+            return
+
+        message = "🔎 **Твоите ключови думи:**\n\n"
+        for index, (keyword,) in enumerate(keywords, start=1):
+            message += f"➤ **{index}. {keyword}**\n"
+
+        await update.message.reply_text(message, parse_mode="Markdown")
+
+    except Exception as e:
+        await update.message.reply_text(f"❌ Грешка при извличане на ключовите думи: {e}")
+
+
 # Основна функция за инициализиране на бота
 def main() -> None:
     # Използваме новия Application клас за инициализиране на бота
@@ -210,6 +279,8 @@ def main() -> None:
     application.add_handler(CommandHandler("list_channels", list_channels))
     application.add_handler(CommandHandler("list_videos", list_videos))
     application.add_handler(CommandHandler("help", help_command))
+    application.add_handler(CommandHandler("add_keyword", add_keyword))
+    application.add_handler(CommandHandler("list_keywords", list_keywords))
 
     # Стартиране на бота
     application.run_polling()

@@ -250,7 +250,8 @@ async def add_keyword(update: Update, context: CallbackContext) -> None:
             conn.commit()
 
         # Добавяне на ключовата дума в `keywords`
-        cursor.execute("INSERT INTO keywords (user_id, keyword) VALUES (%s, %s)", (user_id, keyword))
+        cleaned_keyword = keyword.strip().strip("'").strip('"')  # Премахва кавичките
+        cursor.execute("INSERT INTO keywords (user_id, keyword) VALUES (%s, %s)", (user_id, cleaned_keyword))
         conn.commit()
 
         cursor.close()
@@ -273,7 +274,7 @@ async def list_keywords(update: Update, context: CallbackContext) -> None:
 
         # Взимаме всички ключови думи на потребителя
         cursor.execute("SELECT keyword FROM keywords WHERE user_id = %s", (user_id,))
-        keywords = cursor.fetchall()
+        keywords = [row[0].strip().strip("'").strip('"') for row in cursor.fetchall()]
 
         cursor.close()
         conn.close()

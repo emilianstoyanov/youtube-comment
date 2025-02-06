@@ -124,6 +124,38 @@ async def list_channels(update: Update, context: CallbackContext) -> None:
     except Exception as e:
         await update.message.reply_text(f"⚠️ Грешка при извличане на каналите: {e}")
 
+async def list_videos(update: Update, context: CallbackContext) -> None:
+    try:
+        # Свързване към базата
+        conn = connect_db()
+        cursor = conn.cursor()
+
+        # Извличане на всички видеа + името на канала
+        cursor.execute("""
+            SELECT v.video_url, c.channel_name, c.channel_url 
+            FROM videos v
+            JOIN channels c ON v.channel_id = c.id
+            ORDER BY c.channel_name
+        """)
+        videos = cursor.fetchall()
+
+        cursor.close()
+        conn.close()
+
+        if not videos:
+            await update.message.reply_text("❌ Няма добавени видеа.")
+            return
+
+        # Генериране на съобщението във формат Markdown
+        message = "**🎬 Добавени видеа:**\n\n"
+        for index, (video_url, channel_name, channel_url) in enumerate(videos, start=1):
+            message += f"➤ **{index}. [Видео]({video_url})** от **[{channel_name}]({channel_url})**\n"
+
+        await update.message.reply_text(message, parse_mode="Markdown", disable_web_page_preview=True)
+
+    except Exception as e:
+        await update.message.reply_text(f"⚠️ Грешка при извличане на видеата: {e}")
+
 
 # Функция за стартиране на бота
 async def start(update: Update, context: CallbackContext) -> None:
@@ -137,8 +169,11 @@ async def start(update: Update, context: CallbackContext) -> None:
         f'2. За добавяне на URL на видео:\n'
         f'   /add_video <url на видеото> <url на канала> \n\n'
 
-        f'3. За листване на всички добавени канали и видеа:\n'
+        f'3. За листване на всички добавени канали:\n'
         f'   /list_channels'
+
+        f'4. За листване на всички добавени видеа:\n'
+        f'   /list_videos'
     )
 
 
@@ -152,6 +187,7 @@ def main() -> None:
     application.add_handler(CommandHandler("add_channel", add_channel))
     application.add_handler(CommandHandler("add_video", add_video))
     application.add_handler(CommandHandler("list_channels", list_channels))
+    application.add_handler(CommandHandler("list_videos", list_videos))
 
     # Стартиране на бота
     application.run_polling()

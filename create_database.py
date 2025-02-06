@@ -28,15 +28,24 @@ cursor.execute("""
     )
 """)
 
-# Таблица в базата с id, потребител и ключови думи, които добавя
+# ✅ Първо създаваме таблицата `users`, ако не съществува
 cursor.execute("""
-       CREATE TABLE IF NOT EXISTS keywords (
-           id SERIAL PRIMARY KEY,
-           user_id BIGINT REFERENCES users(telegram_id) ON DELETE CASCADE,
-           keyword VARCHAR(255) NOT NULL,
-           created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-       )
-   """)
+     CREATE TABLE IF NOT EXISTS users (
+         id SERIAL PRIMARY KEY,
+         telegram_id BIGINT UNIQUE NOT NULL,
+         username VARCHAR(255)
+     )
+ """)
+
+# ✅ След това създаваме `keywords`, която зависи от `users`
+cursor.execute("""
+     CREATE TABLE IF NOT EXISTS keywords (
+         id SERIAL PRIMARY KEY,
+         user_id BIGINT REFERENCES users(telegram_id) ON DELETE CASCADE,
+         keyword VARCHAR(255) NOT NULL,
+         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+     )
+ """)
 
 # Потвърждаваме промените
 conn.commit()

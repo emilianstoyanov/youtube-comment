@@ -58,6 +58,7 @@ async def add_channel(update: Update, context: CallbackContext) -> None:
         await update.message.reply_text("Моля, добавете име на канала и URL.\n"
                                         "Във фомат: /add_channel human https://www.youtube.com/@human")
 
+
 # Функция за добавяне на видео
 async def add_video(update: Update, context: CallbackContext) -> None:
     if len(context.args) > 1:
@@ -103,58 +104,6 @@ async def add_video(update: Update, context: CallbackContext) -> None:
     else:
         await update.message.reply_text("Моля, добавете URL на видеото и на канала.\n"
                                         "Във фомат: /add_video https://www.youtube.com/watch?v=dQwф45х9WgXcQ "
-                                        "https://www.youtube.com/@HUMAN")
-
-
-async def add_video(update: Update, context: CallbackContext) -> None:
-    if len(context.args) > 1:
-        video_url = context.args[0]
-        channel_url = context.args[1]
-
-        try:
-            # Свързване към базата
-            conn = connect_db()
-            cursor = conn.cursor()
-
-            # Намери channel_id чрез URL на канала
-            cursor.execute("SELECT id FROM channels WHERE channel_url = %s", (channel_url,))
-            result = cursor.fetchone()
-
-            if result:
-                channel_id = result[0]
-
-                # Използваме yt-dlp за извличане на информация за видеото
-                with yt_dlp.YoutubeDL() as ydl:
-                    info_dict = ydl.extract_info(video_url, download=False)
-                    video_title = info_dict.get('title', 'Няма заглавие')  # Вземаме заглавието на видеото
-
-                # Генерираме уникален video_id (например чрез UUID)
-                video_id = str(uuid.uuid4())
-
-                # Добавяне на видеото в базата
-                cursor.execute("""
-                                   INSERT INTO videos (channel_id, video_url, video_id, video_title)
-                                   VALUES (%s, %s, %s, %s)
-                               """, (channel_id, video_url, video_id, video_title))
-                conn.commit()
-
-                await update.message.reply_text(
-                    f"🎬 Видео \"{video_title}\" беше добавено успешно!",
-                    parse_mode="Markdown",
-                    disable_web_page_preview=True
-                )
-
-            else:
-                await update.message.reply_text("Каналът не съществува в базата.")
-
-            cursor.close()
-            conn.close()
-
-        except Exception as e:
-            await update.message.reply_text(f"Грешка при добавяне на видеото: {e}")
-    else:
-        await update.message.reply_text("Моля, добавете URL на видеото и на канала.\n"
-                                        "Във формат: /add_video https://www.youtube.com/watch?v=dQw4w9WgXcQ "
                                         "https://www.youtube.com/@HUMAN")
 
 

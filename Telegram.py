@@ -274,7 +274,7 @@ async def list_keywords(update: Update, context: CallbackContext) -> None:
 
         # Взимаме всички ключови думи на потребителя
         cursor.execute("SELECT keyword FROM keywords WHERE user_id = %s", (user_id,))
-        keywords = [row[0].strip().strip("'").strip('"') for row in cursor.fetchall()]
+        keywords = cursor.fetchall()
 
         cursor.close()
         conn.close()

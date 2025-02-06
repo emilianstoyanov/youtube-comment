@@ -28,6 +28,16 @@ cursor.execute("""
     )
 """)
 
+# Таблица в базата с id, потребител и ключови думи, които добавя
+cursor.execute("""
+       CREATE TABLE IF NOT EXISTS keywords (
+           id SERIAL PRIMARY KEY,
+           user_id BIGINT REFERENCES users(telegram_id) ON DELETE CASCADE,
+           keyword VARCHAR(255) NOT NULL,
+           created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+       )
+   """)
+
 # Потвърждаваме промените
 conn.commit()
 

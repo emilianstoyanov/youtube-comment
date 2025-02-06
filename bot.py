@@ -6,6 +6,7 @@ from dotenv import load_dotenv
 from telegram import Bot
 import asyncio
 from datetime import datetime
+from vaderSentiment.vaderSentiment import SentimentIntensityAnalyzer
 
 # Зареждаме променливите от .env файла
 load_dotenv()
@@ -70,14 +71,21 @@ def get_video_comments(video_id):
 
 
 def analyze_comments(comments, keywords):
-    """Анализира коментарите и връща само тези, които съдържат ключови думи."""
+    """Анализира коментарите и връща само тези, които съдържат ключови думи + настроението им."""
     matched_comments = []
 
     for comment in comments:
+        sentiment = analyze_sentiment(comment["text"])  # AI анализ на настроението
+
         for keyword in keywords:
             if keyword in comment["text"].lower():
-                matched_comments.append(comment)
-                break  # 🔹 Ако вече има съвпадение, не проверяваме повече ключови думи
+                matched_comments.append({
+                    "author": comment["author"],
+                    "text": comment["text"],
+                    "sentiment": sentiment,  # 🔥 Добавяме настроението
+                    "published_at": comment["published_at"]
+                })
+                break
 
     return matched_comments
 
@@ -168,20 +176,58 @@ def get_current_date():
     return f"{now.day} {months[now.month]} {now.year}"
 
 
+# Инициализираме анализатора
+analyzer = SentimentIntensityAnalyzer()
+
+
+def analyze_sentiment(comment):
+    """Анализира настроението на коментар: позитивно, негативно или неутрално."""
+    sentiment_score = analyzer.polarity_scores(comment)["compound"]
+
+    if sentiment_score >= 0.05:
+        return "😊 Позитивно"
+    elif sentiment_score <= -0.05:
+        return "😠 Негативно"
+    else:
+        return "😐 Неутрално"
+
+
 def generate_report_summary(report):
-    """Генерира кратък текстов отчет за анализираните видеа."""
+    """Генерира кратък текстов отчет за анализираните видеа + статистика на настроенията."""
     current_date = get_current_date()
     summary = f"📅 **Отчет за {current_date}**\n\n"
     summary += f"📌 Проверени видеа: {len(report)}\n\n"
+
+    total_positive = 0
+    total_negative = 0
+    total_neutral = 0
 
     for entry in report:
         video_url = entry["video_url"]
         video_id = entry["video_id"]
         total_comments = len(entry["matched_comments"])
 
+        # 🔹 Анализираме настроението на коментарите
+        positive = sum(1 for c in entry["matched_comments"] if c["sentiment"] == "😊 Позитивно")
+        negative = sum(1 for c in entry["matched_comments"] if c["sentiment"] == "😠 Негативно")
+        neutral = total_comments - (positive + negative)
+
+        total_positive += positive
+        total_negative += negative
+        total_neutral += neutral
+
         summary += f"🔍 **Видео:** [{video_id}]({video_url})\n"
         summary += f"   - 📢 **Общо коментари:** {total_comments}\n"
-        summary += f"   ✅ **Съвпадащи коментари:** {total_comments}\n\n"
+        summary += f"   ✅ **Съвпадащи коментари:** {total_comments}\n"
+        summary += f"   - 😊 **Позитивни:** {positive}\n"
+        summary += f"   - 😠 **Негативни:** {negative}\n"
+        summary += f"   - 😐 **Неутрални:** {neutral}\n\n"
+
+    # 🔹 Обща статистика
+    summary += "📊 **Обща статистика на настроенията:**\n"
+    summary += f"   - 😊 **Позитивни:** {total_positive}\n"
+    summary += f"   - 😠 **Негативни:** {total_negative}\n"
+    summary += f"   - 😐 **Неутрални:** {total_neutral}\n"
 
     return summary
 

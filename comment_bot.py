@@ -232,46 +232,76 @@ def get_channel_id_from_db(channel_url):
     return result[0] if result else None
 
 
+# def run_comment_bot():
+#     """Основна логика на бота"""
+#     channels = get_channels_from_db()
+#
+#     for channel_url, user_id in channels:
+#         logger.info(f"🔍 Проверяваме за нови видеа в канал {channel_url}...")
+#
+#         # ✅ Намерете channel_id от базата
+#         channel_id = get_channel_id_from_db(channel_url)
+#
+#         if not channel_id:
+#             logger.warning(f"⚠️ Пропускаме {channel_url}, защото няма съответстващ channel_id.")
+#             continue  # Пропускаме този канал
+#
+#         video_id, video_url = fetch_latest_video_for_channel(channel_url)
+#
+#         if video_id:
+#             is_new_video = add_video_to_db(video_id, video_url, channel_id,
+#                                            user_id)  # ✅ Подаваме channel_id, не channel_url!
+#
+#             if is_new_video:
+#                 comments = ["Страхотно видео! 🔥",
+#                             "Браво, много добро съдържание! 👌",
+#                             "Този контент е супер полезен! 🚀",
+#                             "Топ! 🔥",
+#                             "👌👌👌",
+#                             "🔥🔥🔥",
+#                             "cool! 🚀",
+#                             "Продължавай в същия дух! 🙌",
+#                             " 🙌 🙌 🙌 ",
+#                             " Благодаря! 👌",
+#
+#                             ]
+#                 comment_text = random.choice(comments)
+#
+#                 if post_comment(youtube, video_id, comment_text):
+#                     logger.info(f"✅ Коментар публикуван: {comment_text} на {video_url}")
+#             else:
+#                 logger.info(f"🚫 Видеото {video_url} вече е в базата. Пропускаме коментар.")
+
+
 def run_comment_bot():
     """Основна логика на бота"""
     channels = get_channels_from_db()
 
-    for channel_url, user_id in channels:
+    for channel_id, channel_url, user_id in channels:  # ✅ Вече правилно разпознаваме channel_id, channel_url, user_id
         logger.info(f"🔍 Проверяваме за нови видеа в канал {channel_url}...")
 
-        # ✅ Намерете channel_id от базата
-        channel_id = get_channel_id_from_db(channel_url)
-
-        if not channel_id:
-            logger.warning(f"⚠️ Пропускаме {channel_url}, защото няма съответстващ channel_id.")
-            continue  # Пропускаме този канал
-
-        video_id, video_url = fetch_latest_video_for_channel(channel_url)
+        video_id, video_url = fetch_latest_video_for_channel(channel_url)  # ✅ подаваме `channel_url`
 
         if video_id:
-            is_new_video = add_video_to_db(video_id, video_url, channel_id,
-                                           user_id)  # ✅ Подаваме channel_id, не channel_url!
+            add_video_to_db(video_id, video_url, channel_id, user_id)  # ✅ подаваме `channel_id`
 
-            if is_new_video:
-                comments = ["Страхотно видео! 🔥",
-                            "Браво, много добро съдържание! 👌",
-                            "Този контент е супер полезен! 🚀",
-                            "Топ! 🔥",
-                            "👌👌👌",
-                            "🔥🔥🔥",
-                            "cool! 🚀",
-                            "Продължавай в същия дух! 🙌",
-                            " 🙌 🙌 🙌 ",
-                            " Благодаря! 👌",
+    videos = get_latest_videos()
 
-                            ]
-                comment_text = random.choice(comments)
+    if not videos:
+        logger.info("🚫 Няма нови видеа за коментиране.")
+        return
 
-                if post_comment(youtube, video_id, comment_text):
-                    logger.info(f"✅ Коментар публикуван: {comment_text} на {video_url}")
-            else:
-                logger.info(f"🚫 Видеото {video_url} вече е в базата. Пропускаме коментар.")
+    for video_id, video_url, channel_id, user_id in videos:
+        if has_already_commented(video_id, user_id):
+            logger.info(f"🚫 Пропускаме {video_url}, защото вече сме коментирали.")
+            continue  # 🚀 Ако вече е коментирано, пропускаме
 
+        comments = ["Страхотно видео! 🔥", "Браво, много добро съдържание! 👌", "Този контент е супер полезен! 🚀"]
+        comment_text = random.choice(comments)
+
+        if post_comment(youtube, video_id, comment_text):
+            logger.info(f"✅ Коментар публикуван: {comment_text} на {video_url}")
+            save_posted_comment(video_id, user_id, comment_text)  # ✅ Запазваме в базата
 
 if __name__ == "__main__":
     run_comment_bot()

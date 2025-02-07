@@ -49,23 +49,24 @@ def get_channel_id_from_handle(handle):
 
 
 async def add_channel(update: Update, context: CallbackContext) -> None:
+    """Добавяне на нов YouTube канал"""
     user_id = update.message.from_user.id
     username = update.message.from_user.username
 
     if len(context.args) < 2:
         await update.message.reply_text(
-            "⚠️ Моля, добавете **име на канала** и **URL на канала**! 📌 Пример: `/add_channel KreteKlizmi https://www.youtube.com/@KreteKlizmi`")
+            "⚠️ Моля, добавете **име на канала** и **URL на канала**!\n"
+            "📌 Пример: `/add_channel KreteKlizmi https://www.youtube.com/@KreteKlizmi`")
         return
 
-    channel_name = context.args[0]  # Името на канала
-    channel_url = context.args[1]  # Линк към канала
+    channel_name = context.args[0]
+    channel_url = context.args[1]
 
-    # ✅ Ако каналът е в @handle формат, конвертираме в Channel ID
     if "youtube.com/@" in channel_url:
-        handle = channel_url.split("@")[1]  # Взимаме само името след "@"
+        handle = channel_url.split("@")[1]
         channel_id = get_channel_id_from_handle(handle)
     else:
-        channel_id = channel_url  # Ако вече е Channel ID
+        channel_id = channel_url
 
     if not channel_id or not channel_id.startswith("UC"):
         await update.message.reply_text("❌ Неуспешно извличане на Channel ID. Уверете се, че URL е правилен!")
@@ -75,7 +76,6 @@ async def add_channel(update: Update, context: CallbackContext) -> None:
         conn = connect_db()
         cursor = conn.cursor()
 
-        # ✅ Проверяваме дали потребителят съществува
         cursor.execute("SELECT id FROM users WHERE telegram_id = %s", (user_id,))
         user = cursor.fetchone()
 
@@ -85,7 +85,6 @@ async def add_channel(update: Update, context: CallbackContext) -> None:
             user_id = cursor.fetchone()[0]
             conn.commit()
 
-        # ✅ Добавяме канала с реалното Channel ID
         cursor.execute("INSERT INTO channels (channel_name, channel_url, user_id) VALUES (%s, %s, %s)",
                        (channel_name, channel_id, user_id))
         conn.commit()
@@ -101,8 +100,70 @@ async def add_channel(update: Update, context: CallbackContext) -> None:
         await update.message.reply_text(f"❌ Грешка при добавяне на канала: {e}")
 
 
-# ✅ Функцията за добавяне на видео остава същата
+async def list_channels(update: Update, context: CallbackContext) -> None:
+    """📋 Извежда списък с всички добавени канали от потребителя"""
+    user_id = update.message.from_user.id
+
+    try:
+        conn = connect_db()
+        cursor = conn.cursor()
+
+        cursor.execute("SELECT channel_name, channel_url FROM channels WHERE user_id = %s", (user_id,))
+        channels = cursor.fetchall()
+
+        cursor.close()
+        conn.close()
+
+        if not channels:
+            await update.message.reply_text("⚠️ Все още нямаш добавени канали.")
+            return
+
+        message = "📂 **Твоите канали:**\n\n"
+        for index, (name, url) in enumerate(channels, start=1):
+            message += f"🔹 **{name}** - [{url}](https://www.youtube.com/channel/{url})\n"
+
+        await update.message.reply_text(message, parse_mode="Markdown", disable_web_page_preview=True)
+
+    except Exception as e:
+        await update.message.reply_text(f"❌ Грешка при извличане на каналите: {e}")
+
+
+async def remove_channel(update: Update, context: CallbackContext) -> None:
+    """❌ Премахва канал от базата по Channel ID"""
+    user_id = update.message.from_user.id
+
+    if len(context.args) < 1:
+        await update.message.reply_text("⚠️ Моля, въведете **Channel ID** на канала, който искате да премахнете!\n"
+                                        "📌 Пример: `/remove_channel UC_x5XG1OV2P6uZZ5FSM9Ttw`")
+        return
+
+    channel_id = context.args[0]
+
+    try:
+        conn = connect_db()
+        cursor = conn.cursor()
+
+        # Проверяваме дали потребителят притежава този канал
+        cursor.execute("SELECT id FROM channels WHERE channel_url = %s AND user_id = %s", (channel_id, user_id))
+        result = cursor.fetchone()
+
+        if not result:
+            await update.message.reply_text("⚠️ Каналът не съществува в базата или не ти принадлежи!")
+        else:
+            cursor.execute("DELETE FROM channels WHERE channel_url = %s AND user_id = %s", (channel_id, user_id))
+            conn.commit()
+            await update.message.reply_text(f"✅ Каналът с ID `{channel_id}` беше премахнат успешно!",
+                                            parse_mode="Markdown")
+
+        cursor.close()
+        conn.close()
+
+    except Exception as e:
+        await update.message.reply_text(f"❌ Грешка при премахване на канала: {e}")
+
+
 async def add_video(update: Update, context: CallbackContext) -> None:
+    """Добавяне на видео"""
     user_id = update.message.from_user.id
     username = update.message.from_user.username
 
@@ -114,43 +175,25 @@ async def add_video(update: Update, context: CallbackContext) -> None:
     video_url = context.args[0]
     channel_url = context.args[1]
 
-    # ✅ Извличаме video_id от линка
     video_id_match = re.search(r"v=([a-zA-Z0-9_-]{11})", video_url)
     if not video_id_match:
-        await update.message.reply_text(
-            "❌ Невалиден YouTube линк! Уверете се, че използвате стандартен формат: `https://www.youtube.com/watch?v=VIDEO_ID`")
+        await update.message.reply_text("❌ Невалиден YouTube линк!")
         return
 
-    video_id = video_id_match.group(1)  # Взимаме ID-то от URL-а
+    video_id = video_id_match.group(1)
 
     try:
         conn = connect_db()
         cursor = conn.cursor()
 
-        # Проверка дали потребителят съществува
-        cursor.execute("SELECT id FROM users WHERE telegram_id = %s", (user_id,))
-        user = cursor.fetchone()
-
-        if not user:
-            cursor.execute("INSERT INTO users (telegram_id, username) VALUES (%s, %s) RETURNING id",
-                           (user_id, username))
-            user_id = cursor.fetchone()[0]
-            conn.commit()
-
-        # Намери channel_id чрез URL на канала
         cursor.execute("SELECT id FROM channels WHERE channel_url = %s AND user_id = %s", (channel_url, user_id))
         result = cursor.fetchone()
 
         if result:
             channel_id = result[0]
-
-            # ✅ Вкарваме и video_id в базата
-            cursor.execute("""
-                INSERT INTO videos (user_id, channel_id, video_url, video_id)
-                VALUES (%s, %s, %s, %s)
-            """, (user_id, channel_id, video_url, video_id))
+            cursor.execute("INSERT INTO videos (user_id, channel_id, video_url, video_id) VALUES (%s, %s, %s, %s)",
+                           (user_id, channel_id, video_url, video_id))
             conn.commit()
-
             await update.message.reply_text(f"🎬 Видео [{video_id}]({video_url}) беше добавено успешно!",
                                             parse_mode="Markdown", disable_web_page_preview=True)
         else:
@@ -163,12 +206,13 @@ async def add_video(update: Update, context: CallbackContext) -> None:
         await update.message.reply_text(f"❌ Грешка при добавяне на видеото: {e}")
 
 
-# ✅ Стартираме бота
 def main() -> None:
     application = Application.builder().token(TELEGRAM_TOKEN).build()
 
     application.add_handler(CommandHandler("add_channel", add_channel))
-    application.add_handler(CommandHandler("add_video", add_video))
+    application.add_handler(CommandHandler("list_channels", list_channels))
+    application.add_handler(CommandHandler("remove_channel", remove_channel))
+    # application.add_handler(CommandHandler("add_video", add_video))
 
     application.run_polling()
 

@@ -206,12 +206,50 @@ async def add_video(update: Update, context: CallbackContext) -> None:
         await update.message.reply_text(f"❌ Грешка при добавяне на видеото: {e}")
 
 
+async def start_command(update: Update, context: CallbackContext) -> None:
+    """👋 Приветства потребителя и му дава кратка информация за бота"""
+    user_name = update.message.from_user.first_name
+    message = (
+        f"👋 Здравей, **{user_name}**!\n\n"
+        "🎥 **YouTube Auto Comment Bot** е тук, за да ти помогне!\n"
+        "✅ Добави YouTube канали и ботът ще публикува автоматични коментари под новите им видеа.\n\n"
+        "ℹ️ Използвай `/help`, за да видиш всички налични команди."
+    )
+
+    await update.message.reply_text(message, parse_mode="Markdown")
+
+
+async def help_command(update: Update, context: CallbackContext) -> None:
+    """📋 Показва списък с всички налични команди"""
+    message = (
+        "**💡 Достъпни команди:**\n\n"
+        "📌 **Добавяне на канал:**\n"
+        "`/add_channel <име на канала> <URL на канала>`\n"
+        "_Добавя нов YouTube канал към наблюдаваните._\n\n"
+
+        "📂 **Листване на канали:**\n"
+        "`/list_channels`\n"
+        "_Показва списък с всички добавени канали._\n\n"
+
+        "❌ **Премахване на канал:**\n"
+        "`/remove_channel <Channel ID>`\n"
+        "_Премахва даден канал от базата._\n\n"
+
+        "ℹ️ **Още функции ще бъдат добавени скоро... 🚀**"
+    )
+
+    await update.message.reply_text(message, parse_mode="Markdown", disable_web_page_preview=True)
+
+
 def main() -> None:
     application = Application.builder().token(TELEGRAM_TOKEN).build()
 
+    application.add_handler(CommandHandler("start", start_command))
+    application.add_handler(CommandHandler("help", help_command))
     application.add_handler(CommandHandler("add_channel", add_channel))
     application.add_handler(CommandHandler("list_channels", list_channels))
     application.add_handler(CommandHandler("remove_channel", remove_channel))
+
     # application.add_handler(CommandHandler("add_video", add_video))
 
     application.run_polling()

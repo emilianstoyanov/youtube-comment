@@ -59,18 +59,18 @@ def connect_db():
     return psycopg2.connect(DATABASE_URL, sslmode='require')
 
 
-def fetch_latest_video_for_channel(channel_id):
-    """Взема най-новото видео от даден YouTube канал"""
+def fetch_latest_video_for_channel(channel_url):
+    """Взема най-новото видео от даден YouTube канал (channel_url е YouTube Channel ID)"""
     try:
-        logger.info(f"🔍 Извличаме последното видео от канал (channel_id): {channel_id}...")
+        logger.info(f"🔍 Извличаме последното видео от канал: {channel_url}...")
 
-        if not channel_id.startswith("UC"):
-            logger.error(f"❌ Грешен Channel ID: {channel_id}. Очакваме ID да започва с 'UC'.")
+        if not channel_url.startswith("UC"):
+            logger.error(f"❌ Грешен Channel ID: {channel_url}. Очакваме ID да започва с 'UC'.")
             return None, None
 
         request = youtube.search().list(
             part="id",
-            channelId=channel_id,  # Подаваме channel_url, който вече е Channel ID
+            channelId=channel_url,  # Подаваме YouTube Channel ID
             order="date",
             maxResults=1
         )
@@ -90,11 +90,11 @@ def fetch_latest_video_for_channel(channel_id):
                 logger.warning("⚠️ Няма videoId в отговора.")
                 return None, None
         else:
-            logger.warning(f"⚠️ Няма намерени видеа за канал {channel_id}.")
+            logger.warning(f"⚠️ Няма намерени видеа за канал {channel_url}.")
             return None, None
 
     except Exception as e:
-        logger.error(f"❌ Грешка при извличане на видео за канал {channel_id}: {e}")
+        logger.error(f"❌ Грешка при извличане на видео за канал {channel_url}: {e}")
         return None, None
 
 
@@ -186,13 +186,13 @@ def run_comment_bot():
     """Основна логика на бота"""
     channels = get_channels_from_db()
 
-    for channel_url, user_id in channels:  # ✅ Взимаме channel_url вместо channel_id
+    for channel_id, channel_url, user_id in channels:  # ✅ Вече правилно разпознаваме channel_id, channel_url, user_id
         logger.info(f"🔍 Проверяваме за нови видеа в канал {channel_url}...")
 
         video_id, video_url = fetch_latest_video_for_channel(channel_url)  # ✅ подаваме `channel_url`
 
         if video_id:
-            add_video_to_db(video_id, video_url, channel_url, user_id)  # ✅ подаваме `channel_url`
+            add_video_to_db(video_id, video_url, channel_id, user_id)  # ✅ подаваме `channel_id`
 
     videos = get_latest_videos()
 
@@ -201,7 +201,6 @@ def run_comment_bot():
         return
 
     for video_id, video_url, channel_id, user_id in videos:
-        # ✅ Добавяме `user_id`, за да съответства на `has_already_commented(video_id, user_id)`
         if has_already_commented(video_id, user_id):
             logger.info(f"🚫 Пропускаме {video_url}, защото вече сме коментирали.")
             continue  # 🚀 Ако вече е коментирано, пропускаме

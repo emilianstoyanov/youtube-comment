@@ -236,26 +236,21 @@ def run_comment_bot():
         video_id, video_url = fetch_latest_video_for_channel(channel_url)
 
         if video_id:
-            is_new_video = add_video_to_db(video_id, video_url, channel_id,
-                                           user_id)  # ✅ Подаваме channel_id, не channel_url!
+            is_new_video = add_video_to_db(video_id, video_url, channel_id, user_id)
 
             if is_new_video:
-                comments = ["Страхотно видео! 🔥",
-                            "Браво, много добро съдържание! 👌",
-                            "Този контент е супер полезен! 🚀",
-                            "Топ! 🔥",
-                            "👌👌👌",
-                            "🔥🔥🔥",
-                            "cool! 🚀",
-                            "Продължавай в същия дух! 🙌",
-                            " 🙌 🙌 🙌 ",
-                            " Благодаря! 👌",
-
-                            ]
+                comments = [
+                    "Страхотно видео! 🔥", "Браво, много добро съдържание! 👌", "Този контент е супер полезен! 🚀",
+                    "Топ! 🔥", "👌👌👌", "🔥🔥🔥", "cool! 🚀", "Продължавай в същия дух! 🙌",
+                    " 🙌 🙌 🙌 ", " Благодаря! 👌"
+                ]
                 comment_text = random.choice(comments)
 
-                if post_comment(youtube, video_id, comment_text):
+                # ✅ Поправено: Добавяме `user_id` в извикването на `post_comment`
+                if post_comment(youtube, video_id, comment_text, user_id):
                     logger.info(f"✅ Коментар публикуван: {comment_text} на {video_url}")
+                else:
+                    logger.warning(f"⚠️ Неуспешен опит за коментиране на {video_url}.")
             else:
                 logger.info(f"🚫 Видеото {video_url} вече е в базата. Пропускаме коментар.")
 

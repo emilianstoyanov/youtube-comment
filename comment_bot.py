@@ -115,11 +115,10 @@ def fetch_latest_video_for_channel(channel_url):
 #     conn.close()
 
 def add_video_to_db(video_id, video_url, channel_id, user_id):
-    """Добавя видео в базата, ако още не съществува."""
+    """Добавя ново видео в базата, ако още не съществува"""
     conn = connect_db()
     cursor = conn.cursor()
 
-    # ✅ Проверка дали вече сме записали видеото
     cursor.execute("SELECT COUNT(*) FROM videos WHERE video_id = %s", (video_id,))
     exists = cursor.fetchone()[0]
 
@@ -130,13 +129,11 @@ def add_video_to_db(video_id, video_url, channel_id, user_id):
         """, (channel_id, video_url, video_id, user_id))
         conn.commit()
         logger.info(f"✅ Видео добавено в базата: {video_url}")
-    else:
-        logger.info(f"⚠️ Видео {video_url} вече съществува в базата. Пропускаме коментар.")
+        return True  # ✅ Видео е ново
 
     cursor.close()
     conn.close()
-
-    return exists == 0  # ✅ Връщаме True само ако видеото е добавено за първи път
+    return False  # 🚫 Видео вече съществува
 
 
 # def get_channels_from_db():
@@ -249,6 +246,19 @@ def save_posted_comment(video_id, user_id, comment_text):
 #             logger.info(f"✅ Коментар публикуван: {comment_text} на {video_url}")
 #             save_posted_comment(video_id, user_id, comment_text)  # ✅ Запазваме в базата
 
+def get_channel_id_from_db(channel_url):
+    """Връща channel_id за даден channel_url"""
+    conn = connect_db()
+    cursor = conn.cursor()
+
+    cursor.execute("SELECT id FROM channels WHERE channel_url = %s", (channel_url,))
+    result = cursor.fetchone()
+
+    cursor.close()
+    conn.close()
+
+    return result[0] if result else None
+
 
 def run_comment_bot():
     """Основна логика на бота"""
@@ -257,12 +267,20 @@ def run_comment_bot():
     for channel_url, user_id in channels:
         logger.info(f"🔍 Проверяваме за нови видеа в канал {channel_url}...")
 
+        # ✅ Намерете channel_id от базата
+        channel_id = get_channel_id_from_db(channel_url)
+
+        if not channel_id:
+            logger.warning(f"⚠️ Пропускаме {channel_url}, защото няма съответстващ channel_id.")
+            continue  # Пропускаме този канал
+
         video_id, video_url = fetch_latest_video_for_channel(channel_url)
 
         if video_id:
-            is_new_video = add_video_to_db(video_id, video_url, channel_url, user_id)
+            is_new_video = add_video_to_db(video_id, video_url, channel_id,
+                                           user_id)  # ✅ Подаваме channel_id, не channel_url!
 
-            if is_new_video:  # ✅ Ако видеото е ново, коментираме го
+            if is_new_video:
                 comments = ["Страхотно видео! 🔥", "Браво, много добро съдържание! 👌", "Този контент е супер полезен! 🚀"]
                 comment_text = random.choice(comments)
 

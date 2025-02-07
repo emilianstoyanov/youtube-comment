@@ -4,3 +4,6 @@ __pycache__/
 *.pyo
 *.db
 .env
+token.pickle
+client_secret.json
+get_refresh_token.py

@@ -1,2 +1,2 @@
 worker-telegram: python Telegram.py
-worker-bot: python bot.py
+worker-bot: python comment_bot.py

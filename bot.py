@@ -110,7 +110,7 @@ def run_comment_analysis(user_id):
     return report
 
 
-# Изпращане на резултата в JSON файл
+# Запазване на резултата в JSON файл
 def save_report(user_id, report):
     """Запазва резултата в JSON файл."""
     file_path = f"C:\\Users\\lenovo\\Desktop\\Comments\\report_{user_id}.json"

@@ -62,7 +62,7 @@ def connect_db():
 def fetch_latest_video_for_channel(channel_id):
     """Взема най-новото видео от даден YouTube канал"""
     try:
-        logger.info(f"🔍 Проверяваме нови видеа в канал: {channel_id}...")
+        logger.info(f"🔍 Извличаме последното видео от канал: {channel_id}...")
 
         request = youtube.search().list(
             part="id",
@@ -72,15 +72,24 @@ def fetch_latest_video_for_channel(channel_id):
         )
         response = request.execute()
 
-        if "items" in response and response["items"]:
-            video_id = response["items"][0]["id"]["videoId"]
-            video_url = f"https://www.youtube.com/watch?v={video_id}"
-            logger.info(f"✅ Ново видео открито: {video_url}")
-            return video_id, video_url
+        if "items" in response and len(response["items"]) > 0:
+            video_data = response["items"][0]
 
-    except HttpError as e:
-        logger.error(f"❌ Грешка при извличане на видео: {e}")
-    return None, None
+            if "videoId" in video_data["id"]:
+                video_id = video_data["id"]["videoId"]
+                video_url = f"https://www.youtube.com/watch?v={video_id}"
+                logger.info(f"✅ Намерено видео: {video_url}")
+                return video_id, video_url
+            else:
+                logger.warning("⚠️ Няма videoId в отговора.")
+                return None, None
+        else:
+            logger.warning(f"⚠️ Няма намерени видеа за канал {channel_id}.")
+            return None, None
+
+    except Exception as e:
+        logger.error(f"❌ Грешка при извличане на видео за канал {channel_id}: {e}")
+        return None, None
 
 
 def add_video_to_db(video_id, video_url, channel_id, user_id):

@@ -246,19 +246,21 @@ async def help_command(update: Update, context: CallbackContext) -> None:
 
 
 async def already_commented_videos(update: Update, context: CallbackContext) -> None:
-    """Листване на видеата, които вече са коментирани."""
-    user_id = update.message.from_user.id
+    """📜 Показва списък с видеата, на които е оставен коментар."""
+    user_id = update.message.from_user.id  # ID на потребителя
 
     try:
         conn = connect_db()
         cursor = conn.cursor()
 
-        # ✅ Извличаме видеата, които са коментирани от този потребител
+        # ✅ Взимаме всички видеа, които вече са коментирани от потребителя
         cursor.execute("""
-            SELECT videos.video_url, posted_comments.comment_text
+            SELECT videos.video_url, posted_comments.video_title, posted_comments.channel_name, posted_comments.comment_text, posted_comments.commented_at
             FROM posted_comments
             JOIN videos ON posted_comments.video_id = videos.video_id
             WHERE posted_comments.user_id = %s
+            ORDER BY posted_comments.commented_at DESC
+            LIMIT 10
         """, (user_id,))
 
         commented_videos = cursor.fetchall()
@@ -266,18 +268,23 @@ async def already_commented_videos(update: Update, context: CallbackContext) -> 
         conn.close()
 
         if not commented_videos:
-            await update.message.reply_text("⚠️ Няма видеа, които вече са коментирани.")
+            await update.message.reply_text("⚠️ Все още нямаш коментирани видеа.")
             return
 
-        # ✅ Форматираме съобщението
-        message = "📝 **Видеа, които вече са коментирани:**\n\n"
-        for index, (video_url, comment_text) in enumerate(commented_videos, start=1):
-            message += f"🎬 {index}. [{video_url}]({video_url})\n   🗨️ *Коментар:* `{comment_text}`\n\n"
+        message = "📜 **Твоите последни коментирани видеа:**\n\n"
+        for index, (video_url, video_title, channel_name, comment_text, commented_at) in enumerate(commented_videos,
+                                                                                                   start=1):
+            message += (
+                f"🔹 **Видео {index}:**\n"
+                f"🎬 [{video_title}]({video_url}) – 📺 {channel_name}\n"
+                f"📅 {commented_at.strftime('%Y-%m-%d %H:%M')}\n"
+                f"💬 _{comment_text}_\n\n"
+            )
 
         await update.message.reply_text(message, parse_mode="Markdown", disable_web_page_preview=True)
 
     except Exception as e:
-        await update.message.reply_text(f"❌ Грешка при извличане на вече коментираните видеа: {e}")
+        await update.message.reply_text(f"❌ Грешка при извличане на коментираните видеа: {e}")
 
 
 def main() -> None:

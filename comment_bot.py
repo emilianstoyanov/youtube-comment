@@ -179,8 +179,11 @@ def post_comment(youtube, video_id, comment_text, user_id):
         )
         request.execute()
 
+        # ✅ Взимаме заглавието на видеото и името на канала
+        video_title, channel_name = get_video_details(video_id)
+
         # ✅ Запазваме коментара в базата
-        save_posted_comment(video_id, user_id, comment_text)
+        save_posted_comment(video_id, user_id, comment_text, video_title, channel_name)
 
         return True  # ✅ Успешно публикуване
     except HttpError as e:
@@ -189,20 +192,41 @@ def post_comment(youtube, video_id, comment_text, user_id):
         return False
 
 
-def save_posted_comment(video_id, user_id, comment_text):
+def get_video_details(video_id):
+    """Взима заглавието на видеото от YouTube API"""
+    try:
+        request = youtube.videos().list(
+            part="snippet",
+            id=video_id
+        )
+        response = request.execute()
+
+        if "items" in response and len(response["items"]) > 0:
+            video_title = response["items"][0]["snippet"]["title"]
+            channel_name = response["items"][0]["snippet"]["channelTitle"]
+            return video_title, channel_name
+        else:
+            return "Неизвестно заглавие", "Неизвестен канал"
+
+    except Exception as e:
+        logger.error(f"❌ Грешка при взимане на заглавието: {e}")
+        return "Грешка при взимане на заглавие", "Грешка при взимане на канал"
+
+
+def save_posted_comment(video_id, user_id, comment_text, video_title, channel_name):
     """Запазва коментара в `posted_comments`, за да не се публикува отново."""
     conn = connect_db()
     cursor = conn.cursor()
 
     cursor.execute("""
-        INSERT INTO posted_comments (video_id, user_id, comment_text)
-        VALUES (%s, %s, %s)
-    """, (video_id, user_id, comment_text))
+        INSERT INTO posted_comments (video_id, user_id, comment_text, video_title, channel_name, commented_at)
+        VALUES (%s, %s, %s, %s, %s, NOW())
+    """, (video_id, user_id, comment_text, video_title, channel_name))
 
     conn.commit()
     cursor.close()
     conn.close()
-    logger.info(f"💾 Запазен коментар в базата за видео {video_id}")
+    logger.info(f"💾 Запазен коментар в базата за видео {video_title} ({video_id})")
 
 
 def get_channel_id_from_db(channel_url):

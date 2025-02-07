@@ -139,15 +139,28 @@ def add_video_to_db(video_id, video_url, channel_id, user_id):
     return exists == 0  # ✅ Връщаме True само ако видеото е добавено за първи път
 
 
+# def get_channels_from_db():
+#     """Взима всички канали и потребителите им от базата"""
+#     conn = connect_db()
+#     cursor = conn.cursor()
+#     cursor.execute("SELECT id, channel_url, user_id FROM channels")
+#     channels = cursor.fetchall()
+#     cursor.close()
+#     conn.close()
+#     return channels
+
 def get_channels_from_db():
     """Взима всички канали и потребителите им от базата"""
     conn = connect_db()
     cursor = conn.cursor()
-    cursor.execute("SELECT id, channel_url, user_id FROM channels")
+
+    cursor.execute("SELECT channel_url, user_id FROM channels")  # ✅ Взимаме само нужните колони
     channels = cursor.fetchall()
+
     cursor.close()
     conn.close()
-    return channels
+
+    return [(row[0], row[1]) for row in channels]  # ✅ Уверяваме се, че връщаме само два елемента на ред
 
 
 def get_latest_videos():

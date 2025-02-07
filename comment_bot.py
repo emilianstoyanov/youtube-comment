@@ -62,15 +62,21 @@ def connect_db():
 def fetch_latest_video_for_channel(channel_id):
     """Взема най-новото видео от даден YouTube канал"""
     try:
-        logger.info(f"🔍 Извличаме последното видео от канал: {channel_id}...")
+        logger.info(f"🔍 Извличаме последното видео от канал (channel_id): {channel_id}...")
+
+        if not channel_id.startswith("UC"):
+            logger.error(f"❌ Грешен Channel ID: {channel_id}. Очакваме ID да започва с 'UC'.")
+            return None, None
 
         request = youtube.search().list(
             part="id",
-            channelId=channel_id,
+            channelId=channel_id,  # Подаваме channel_url, който вече е Channel ID
             order="date",
             maxResults=1
         )
+
         response = request.execute()
+        logger.info(f"📩 Отговор от YouTube API: {response}")
 
         if "items" in response and len(response["items"]) > 0:
             video_data = response["items"][0]

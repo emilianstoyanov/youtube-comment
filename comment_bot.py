@@ -225,7 +225,16 @@ def run_comment_bot():
                                            user_id)  # ✅ Подаваме channel_id, не channel_url!
 
             if is_new_video:
-                comments = ["Страхотно видео! 🔥", "Браво, много добро съдържание! 👌", "Този контент е супер полезен! 🚀"]
+                comments = ["Страхотно видео! 🔥",
+                            "Браво, много добро съдържание! 👌",
+                            "Този контент е супер полезен! 🚀",
+                            "Топ! 🔥",
+                            "👌👌👌",
+                            "🔥🔥🔥",
+                            "cool! 🚀",
+                            "Продължавай в същия дух! 🙌",
+                            " 🙌 🙌 🙌 ",
+                            ]
                 comment_text = random.choice(comments)
 
                 if post_comment(youtube, video_id, comment_text):

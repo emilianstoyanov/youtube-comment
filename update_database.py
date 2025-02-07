@@ -47,6 +47,16 @@ cursor.execute("""
      )
  """)
 
+cursor.execute("""
+       CREATE TABLE IF NOT EXISTS posted_comments (
+           id SERIAL PRIMARY KEY,
+           video_id VARCHAR(255) NOT NULL,
+           user_id BIGINT NOT NULL,
+           comment_text TEXT NOT NULL,
+           timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+       );
+   """)
+
 # Потвърждаваме промените
 conn.commit()
 

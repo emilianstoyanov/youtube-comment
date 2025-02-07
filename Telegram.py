@@ -4,26 +4,50 @@ from telegram.ext import Application, CommandHandler, CallbackContext
 import psycopg2
 import os
 import re
+from googleapiclient.discovery import build
+from googleapiclient.errors import HttpError
 
-# Настройка на логове
-logging.basicConfig(format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
-                    level=logging.INFO)
+# ✅ Настройка на логове
+logging.basicConfig(format='%(asctime)s - %(name)s - %(levelname)s - %(message)s', level=logging.INFO)
 logger = logging.getLogger(__name__)
 
-# Вземи TELEGRAM API Token от @BotFather
+# ✅ Вземи TELEGRAM API Token от @BotFather
 TELEGRAM_TOKEN = os.getenv("TELEGRAM_TOKEN")
 
-# Вземи данни за Postgres
+# ✅ Вземи данни за Postgres
 DATABASE_URL = os.getenv("DATABASE_URL")
 
+# ✅ Вземи API ключ за YouTube
+YOUTUBE_API_KEY = os.getenv("YOUTUBE_API_KEY")
 
-# Функция за свързване към базата
+# ✅ Свързваме се с YouTube API
+youtube = build("youtube", "v3", developerKey=YOUTUBE_API_KEY)
+
+
 def connect_db():
-    conn = psycopg2.connect(DATABASE_URL, sslmode='require')
-    return conn
+    """Свързване с базата данни"""
+    return psycopg2.connect(DATABASE_URL, sslmode='require')
 
 
-# Функция за добавяне на канал
+def get_channel_id_from_handle(handle):
+    """Конвертира YouTube handle (@Supernaturalee) в истински Channel ID"""
+    try:
+        request = youtube.channels().list(
+            part="id",
+            forHandle=handle
+        )
+        response = request.execute()
+
+        if "items" in response and len(response["items"]) > 0:
+            return response["items"][0]["id"]
+        else:
+            logger.warning(f"⚠️ Не намерихме канал за handle: {handle}")
+            return None
+    except HttpError as e:
+        logger.error(f"❌ Грешка при извличане на Channel ID за handle {handle}: {e}")
+        return None
+
+
 async def add_channel(update: Update, context: CallbackContext) -> None:
     user_id = update.message.from_user.id
     username = update.message.from_user.username
@@ -36,11 +60,22 @@ async def add_channel(update: Update, context: CallbackContext) -> None:
     channel_name = context.args[0]  # Името на канала
     channel_url = context.args[1]  # Линк към канала
 
+    # ✅ Ако каналът е в @handle формат, конвертираме в Channel ID
+    if "youtube.com/@" in channel_url:
+        handle = channel_url.split("@")[1]  # Взимаме само името след "@"
+        channel_id = get_channel_id_from_handle(handle)
+    else:
+        channel_id = channel_url  # Ако вече е Channel ID
+
+    if not channel_id or not channel_id.startswith("UC"):
+        await update.message.reply_text("❌ Неуспешно извличане на Channel ID. Уверете се, че URL е правилен!")
+        return
+
     try:
         conn = connect_db()
         cursor = conn.cursor()
 
-        # Проверка дали потребителят съществува
+        # ✅ Проверяваме дали потребителят съществува
         cursor.execute("SELECT id FROM users WHERE telegram_id = %s", (user_id,))
         user = cursor.fetchone()
 
@@ -50,23 +85,23 @@ async def add_channel(update: Update, context: CallbackContext) -> None:
             user_id = cursor.fetchone()[0]
             conn.commit()
 
-        # ✅ Поправена SQL заявка - добавяме channel_name и user_id
+        # ✅ Добавяме канала с реалното Channel ID
         cursor.execute("INSERT INTO channels (channel_name, channel_url, user_id) VALUES (%s, %s, %s)",
-                       (channel_name, channel_url, user_id))
+                       (channel_name, channel_id, user_id))
         conn.commit()
 
         cursor.close()
         conn.close()
 
         await update.message.reply_text(
-            f"✅ Каналът **{channel_name}** беше добавен успешно!\n🔗 [Линк към канала]({channel_url})",
+            f"✅ Каналът **{channel_name}** беше добавен успешно!\n🔗 Channel ID: `{channel_id}`",
             parse_mode="Markdown", disable_web_page_preview=True)
 
     except Exception as e:
         await update.message.reply_text(f"❌ Грешка при добавяне на канала: {e}")
 
 
-# Функция за добавяне на видео
+# ✅ Функцията за добавяне на видео остава същата
 async def add_video(update: Update, context: CallbackContext) -> None:
     user_id = update.message.from_user.id
     username = update.message.from_user.username
@@ -128,187 +163,13 @@ async def add_video(update: Update, context: CallbackContext) -> None:
         await update.message.reply_text(f"❌ Грешка при добавяне на видеото: {e}")
 
 
-# Функция за показване на всички канали
-async def list_channels(update: Update, context: CallbackContext) -> None:
-    user_id = update.message.from_user.id
-
-    try:
-        conn = connect_db()
-        cursor = conn.cursor()
-
-        cursor.execute("SELECT channel_url FROM channels WHERE user_id = %s", (user_id,))
-        channels = cursor.fetchall()
-
-        cursor.close()
-        conn.close()
-
-        if not channels:
-            await update.message.reply_text("⚠️ Все още нямаш добавени канали.")
-            return
-
-        message = "📂 **Твоите канали:**\n\n"
-        for index, (url,) in enumerate(channels, start=1):
-            message += f"🔹 [{url}]({url})\n"
-
-        await update.message.reply_text(message, parse_mode="Markdown", disable_web_page_preview=True)
-
-    except Exception as e:
-        await update.message.reply_text(f"❌ Грешка при извличане на каналите: {e}")
-
-
-async def list_videos(update: Update, context: CallbackContext) -> None:
-    user_id = update.message.from_user.id
-
-    try:
-        conn = connect_db()
-        cursor = conn.cursor()
-
-        cursor.execute("SELECT video_url FROM videos WHERE user_id = %s", (user_id,))
-        videos = cursor.fetchall()
-
-        cursor.close()
-        conn.close()
-
-        if not videos:
-            await update.message.reply_text("⚠️ Все още нямаш добавени видеа.")
-            return
-
-        message = "📜 **Твоите видеа:**\n\n"
-        for index, (url,) in enumerate(videos, start=1):
-            message += f"🎬 [{url}]({url})\n"
-
-        await update.message.reply_text(message, parse_mode="Markdown", disable_web_page_preview=True)
-
-    except Exception as e:
-        await update.message.reply_text(f"❌ Грешка при извличане на видеата: {e}")
-
-
-# Функция за стартиране на бота
-async def start(update: Update, context: CallbackContext) -> None:
-    user_name = update.message.from_user.first_name
-    message = (
-        f"👋 **Здравей, {user_name}!**\n\n"
-        f"Добре дошъл в YouTube Comment Bot! 🎥\n"
-        f"ℹ️ Използвай командата `/help`, за да видиш всички възможности на бота."
-    )
-
-    await update.message.reply_text(message, parse_mode="Markdown")
-
-
-async def help_command(update: Update, context: CallbackContext) -> None:
-    message = (
-        f"💡 **Команди, които можеш да използваш:**\n\n"
-
-        f"📌 **Добавяне на канал:**\n"
-        f"   `/add_channel`  *<име на канала> <URL на канала>*\n\n"
-
-        f"🎬 **Добавяне на видео:**\n"
-        f"   `/add_video`  *<URL на видеото> <URL на канала>*\n\n"
-
-        f"📂 **Листване на добавени канали:**\n"
-        f"   `/list_channels`\n\n"
-
-        f"📜 **Листване на добавени видеа:**\n"
-        f"   `/list_videos`\n\n"
-
-        f"📝 **Добавяне на ключова дума:**\n"
-        f"   `/add_keyword`  *<ключова дума>*\n\n"
-
-        f"🔎 **Листване на всички твои ключови думи:**\n"
-        f"   `/list_keywords`\n\n"
-
-        f"ℹ️ **Още функции скоро...** 🚀"
-    )
-
-    await update.message.reply_text(message, parse_mode="Markdown")
-
-
-# Функция за добавяне на ключови думи на потребителя
-async def add_keyword(update: Update, context: CallbackContext) -> None:
-    user_id = update.message.from_user.id  # ID на потребителя
-    username = update.message.from_user.username  # Telegram username (по избор)
-
-    if len(context.args) < 1:
-        await update.message.reply_text("⚠️ Моля, въведи ключова дума! 📌 Пример: `/add_keyword scam`")
-        return
-
-    keyword = context.args[0].lower()
-
-    try:
-        conn = connect_db()
-        cursor = conn.cursor()
-
-        # Проверка дали потребителят съществува
-        cursor.execute("SELECT id FROM users WHERE telegram_id = %s", (user_id,))
-        user = cursor.fetchone()
-
-        if not user:
-            # Ако потребителят не съществува, го добавяме в `users`
-            cursor.execute("INSERT INTO users (telegram_id, username) VALUES (%s, %s) RETURNING id",
-                           (user_id, username))
-            user_id = cursor.fetchone()[0]
-            conn.commit()
-
-        # Добавяне на ключовата дума в `keywords`
-        cleaned_keyword = keyword.strip().strip("'").strip('"')  # Премахва кавичките
-        cursor.execute("INSERT INTO keywords (user_id, keyword) VALUES (%s, %s)", (user_id, cleaned_keyword))
-        conn.commit()
-
-        cursor.close()
-        conn.close()
-
-        await update.message.reply_text(f"✅ Ключовата дума **'{keyword}'** беше добавена успешно!",
-                                        parse_mode="Markdown")
-
-    except Exception as e:
-        await update.message.reply_text(f"❌ Грешка при добавяне на ключовата дума: {e}")
-
-
-# Функция за листване на добавените ключови думи на потребителя
-async def list_keywords(update: Update, context: CallbackContext) -> None:
-    user_id = update.message.from_user.id  # ID на потребителя
-
-    try:
-        conn = connect_db()
-        cursor = conn.cursor()
-
-        # Взимаме всички ключови думи на потребителя
-        cursor.execute("SELECT keyword FROM keywords WHERE user_id = %s", (user_id,))
-        keywords = cursor.fetchall()
-
-        cursor.close()
-        conn.close()
-
-        if not keywords:
-            await update.message.reply_text("⚠️ Все още нямаш добавени ключови думи.")
-            return
-
-        message = "🔎 **Твоите ключови думи:**\n\n"
-        for index, (keyword,) in enumerate(keywords, start=1):
-            message += f"➤ **{index}. {keyword}**\n"
-
-        await update.message.reply_text(message, parse_mode="Markdown")
-
-    except Exception as e:
-        await update.message.reply_text(f"❌ Грешка при извличане на ключовите думи: {e}")
-
-
-# Основна функция за инициализиране на бота
+# ✅ Стартираме бота
 def main() -> None:
-    # Използваме новия Application клас за инициализиране на бота
     application = Application.builder().token(TELEGRAM_TOKEN).build()
 
-    # Добавяне на командите
-    application.add_handler(CommandHandler("start", start))
     application.add_handler(CommandHandler("add_channel", add_channel))
     application.add_handler(CommandHandler("add_video", add_video))
-    application.add_handler(CommandHandler("list_channels", list_channels))
-    application.add_handler(CommandHandler("list_videos", list_videos))
-    application.add_handler(CommandHandler("help", help_command))
-    application.add_handler(CommandHandler("add_keyword", add_keyword))
-    application.add_handler(CommandHandler("list_keywords", list_keywords))
 
-    # Стартиране на бота
     application.run_polling()
 
 

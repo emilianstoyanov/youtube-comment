@@ -98,12 +98,31 @@ def fetch_latest_video_for_channel(channel_url):
         return None, None
 
 
+# def add_video_to_db(video_id, video_url, channel_id, user_id):
+#     """Добавя ново видео в базата, ако още не съществува"""
+#     conn = connect_db()
+#     cursor = conn.cursor()
+#     cursor.execute("SELECT COUNT(*) FROM videos WHERE video_id = %s", (video_id,))
+#     exists = cursor.fetchone()[0]
+#     if exists == 0:
+#         cursor.execute("""
+#             INSERT INTO videos (channel_id, video_url, video_id, user_id)
+#             VALUES (%s, %s, %s, %s)
+#         """, (channel_id, video_url, video_id, user_id))
+#         conn.commit()
+#         logger.info(f"✅ Видео добавено в базата: {video_url}")
+#     cursor.close()
+#     conn.close()
+
 def add_video_to_db(video_id, video_url, channel_id, user_id):
-    """Добавя ново видео в базата, ако още не съществува"""
+    """Добавя видео в базата, ако още не съществува."""
     conn = connect_db()
     cursor = conn.cursor()
+
+    # ✅ Проверка дали вече сме записали видеото
     cursor.execute("SELECT COUNT(*) FROM videos WHERE video_id = %s", (video_id,))
     exists = cursor.fetchone()[0]
+
     if exists == 0:
         cursor.execute("""
             INSERT INTO videos (channel_id, video_url, video_id, user_id)
@@ -111,8 +130,13 @@ def add_video_to_db(video_id, video_url, channel_id, user_id):
         """, (channel_id, video_url, video_id, user_id))
         conn.commit()
         logger.info(f"✅ Видео добавено в базата: {video_url}")
+    else:
+        logger.info(f"⚠️ Видео {video_url} вече съществува в базата. Пропускаме коментар.")
+
     cursor.close()
     conn.close()
+
+    return exists == 0  # ✅ Връщаме True само ако видеото е добавено за първи път
 
 
 def get_channels_from_db():
@@ -182,35 +206,57 @@ def save_posted_comment(video_id, user_id, comment_text):
     logger.info(f"💾 Запазен коментар в базата за видео {video_id}")
 
 
+# def run_comment_bot():
+#     """Основна логика на бота"""
+#     channels = get_channels_from_db()
+#
+#     for channel_id, channel_url, user_id in channels:  # ✅ Вече правилно разпознаваме channel_id, channel_url, user_id
+#         logger.info(f"🔍 Проверяваме за нови видеа в канал {channel_url}...")
+#
+#         video_id, video_url = fetch_latest_video_for_channel(channel_url)  # ✅ подаваме `channel_url`
+#
+#         if video_id:
+#             add_video_to_db(video_id, video_url, channel_id, user_id)  # ✅ подаваме `channel_id`
+#
+#     videos = get_latest_videos()
+#
+#     if not videos:
+#         logger.info("🚫 Няма нови видеа за коментиране.")
+#         return
+#
+#     for video_id, video_url, channel_id, user_id in videos:
+#         if has_already_commented(video_id, user_id):
+#             logger.info(f"🚫 Пропускаме {video_url}, защото вече сме коментирали.")
+#             continue  # 🚀 Ако вече е коментирано, пропускаме
+#
+#         comments = ["Страхотно видео! 🔥", "Браво, много добро съдържание! 👌", "Този контент е супер полезен! 🚀"]
+#         comment_text = random.choice(comments)
+#
+#         if post_comment(youtube, video_id, comment_text):
+#             logger.info(f"✅ Коментар публикуван: {comment_text} на {video_url}")
+#             save_posted_comment(video_id, user_id, comment_text)  # ✅ Запазваме в базата
+
+
 def run_comment_bot():
     """Основна логика на бота"""
     channels = get_channels_from_db()
 
-    for channel_id, channel_url, user_id in channels:  # ✅ Вече правилно разпознаваме channel_id, channel_url, user_id
+    for channel_url, user_id in channels:
         logger.info(f"🔍 Проверяваме за нови видеа в канал {channel_url}...")
 
-        video_id, video_url = fetch_latest_video_for_channel(channel_url)  # ✅ подаваме `channel_url`
+        video_id, video_url = fetch_latest_video_for_channel(channel_url)
 
         if video_id:
-            add_video_to_db(video_id, video_url, channel_id, user_id)  # ✅ подаваме `channel_id`
+            is_new_video = add_video_to_db(video_id, video_url, channel_url, user_id)
 
-    videos = get_latest_videos()
+            if is_new_video:  # ✅ Ако видеото е ново, коментираме го
+                comments = ["Страхотно видео! 🔥", "Браво, много добро съдържание! 👌", "Този контент е супер полезен! 🚀"]
+                comment_text = random.choice(comments)
 
-    if not videos:
-        logger.info("🚫 Няма нови видеа за коментиране.")
-        return
-
-    for video_id, video_url, channel_id, user_id in videos:
-        if has_already_commented(video_id, user_id):
-            logger.info(f"🚫 Пропускаме {video_url}, защото вече сме коментирали.")
-            continue  # 🚀 Ако вече е коментирано, пропускаме
-
-        comments = ["Страхотно видео! 🔥", "Браво, много добро съдържание! 👌", "Този контент е супер полезен! 🚀"]
-        comment_text = random.choice(comments)
-
-        if post_comment(youtube, video_id, comment_text):
-            logger.info(f"✅ Коментар публикуван: {comment_text} на {video_url}")
-            save_posted_comment(video_id, user_id, comment_text)  # ✅ Запазваме в базата
+                if post_comment(youtube, video_id, comment_text):
+                    logger.info(f"✅ Коментар публикуван: {comment_text} на {video_url}")
+            else:
+                logger.info(f"🚫 Видеото {video_url} вече е в базата. Пропускаме коментар.")
 
 
 if __name__ == "__main__":

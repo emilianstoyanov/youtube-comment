@@ -161,17 +161,45 @@ def has_already_commented(video_id, user_id):
     return count > 0
 
 
-def post_comment(youtube, video_id, comment_text):
-    """Публикува коментар в YouTube"""
+# def post_comment(youtube, video_id, comment_text):
+#     """Публикува коментар в YouTube"""
+#     try:
+#         request = youtube.commentThreads().insert(
+#             part="snippet",
+#             body={"snippet": {"videoId": video_id, "topLevelComment": {"snippet": {"textOriginal": comment_text}}}}
+#         )
+#         request.execute()
+#         logger.info(f"✅ Коментар публикуван на {video_id}")
+#     except HttpError as e:
+#         logger.error(f"❌ Грешка при публикуване: {e}")
+
+
+def post_comment(youtube, video_id, comment_text, user_id):
+    """Публикува коментар в YouTube и го запазва в базата."""
     try:
         request = youtube.commentThreads().insert(
             part="snippet",
-            body={"snippet": {"videoId": video_id, "topLevelComment": {"snippet": {"textOriginal": comment_text}}}}
+            body={
+                "snippet": {
+                    "videoId": video_id,
+                    "topLevelComment": {
+                        "snippet": {
+                            "textOriginal": comment_text
+                        }
+                    }
+                }
+            }
         )
         request.execute()
-        logger.info(f"✅ Коментар публикуван на {video_id}")
+
+        # ✅ Запазваме коментара в базата
+        save_posted_comment(video_id, user_id, comment_text)
+
+        return True  # ✅ Успешно публикуване
     except HttpError as e:
-        logger.error(f"❌ Грешка при публикуване: {e}")
+        error_message = e.content.decode("utf-8") if hasattr(e, "content") else str(e)
+        logger.error(f"❌ Грешка при публикуване: {error_message}")
+        return False
 
 
 def save_posted_comment(video_id, user_id, comment_text):
@@ -234,6 +262,8 @@ def run_comment_bot():
                             "cool! 🚀",
                             "Продължавай в същия дух! 🙌",
                             " 🙌 🙌 🙌 ",
+                            " Благодаря! 👌",
+
                             ]
                 comment_text = random.choice(comments)
 

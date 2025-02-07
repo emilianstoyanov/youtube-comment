@@ -235,10 +235,49 @@ async def help_command(update: Update, context: CallbackContext) -> None:
         "`/remove_channel <Channel ID>`\n"
         "_Премахва даден канал от базата._\n\n"
 
+        "🎬 **Листване на вече коментирани видеа:**\n"
+        "`/already_commented_videos`\n"
+        "_Показва списък с всички видеа, които ботът вече е коментирал._\n\n"
+
         "ℹ️ **Още функции ще бъдат добавени скоро... 🚀**"
     )
 
     await update.message.reply_text(message, parse_mode="Markdown", disable_web_page_preview=True)
+
+
+async def already_commented_videos(update: Update, context: CallbackContext) -> None:
+    """Листване на видеата, които вече са коментирани."""
+    user_id = update.message.from_user.id
+
+    try:
+        conn = connect_db()
+        cursor = conn.cursor()
+
+        # ✅ Извличаме видеата, които са коментирани от този потребител
+        cursor.execute("""
+            SELECT videos.video_url, posted_comments.comment_text
+            FROM posted_comments
+            JOIN videos ON posted_comments.video_id = videos.video_id
+            WHERE posted_comments.user_id = %s
+        """, (user_id,))
+
+        commented_videos = cursor.fetchall()
+        cursor.close()
+        conn.close()
+
+        if not commented_videos:
+            await update.message.reply_text("⚠️ Няма видеа, които вече са коментирани.")
+            return
+
+        # ✅ Форматираме съобщението
+        message = "📝 **Видеа, които вече са коментирани:**\n\n"
+        for index, (video_url, comment_text) in enumerate(commented_videos, start=1):
+            message += f"🎬 {index}. [{video_url}]({video_url})\n   🗨️ *Коментар:* `{comment_text}`\n\n"
+
+        await update.message.reply_text(message, parse_mode="Markdown", disable_web_page_preview=True)
+
+    except Exception as e:
+        await update.message.reply_text(f"❌ Грешка при извличане на вече коментираните видеа: {e}")
 
 
 def main() -> None:
@@ -249,6 +288,7 @@ def main() -> None:
     application.add_handler(CommandHandler("add_channel", add_channel))
     application.add_handler(CommandHandler("list_channels", list_channels))
     application.add_handler(CommandHandler("remove_channel", remove_channel))
+    application.add_handler(CommandHandler("already_commented_videos", already_commented_videos))
 
     # application.add_handler(CommandHandler("add_video", add_video))
 

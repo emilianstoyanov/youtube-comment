@@ -189,7 +189,7 @@ def run_comment_bot():
     for channel_id, channel_url, user_id in channels:
         logger.info(f"🔍 Проверяваме за нови видеа в {channel_url}...")
 
-        video_id, video_url = fetch_latest_video_for_channel(channel_id)
+        video_id, video_url = fetch_latest_video_for_channel(channel_url)
 
         if video_id:
             add_video_to_db(video_id, video_url, channel_id, user_id)

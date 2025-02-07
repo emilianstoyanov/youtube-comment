@@ -186,13 +186,13 @@ def run_comment_bot():
     """Основна логика на бота"""
     channels = get_channels_from_db()
 
-    for channel_id, channel_url, user_id in channels:
-        logger.info(f"🔍 Проверяваме за нови видеа в {channel_url}...")
+    for channel_url, user_id in channels:  # ✅ Взимаме channel_url вместо channel_id
+        logger.info(f"🔍 Проверяваме за нови видеа в канал {channel_url}...")
 
-        video_id, video_url = fetch_latest_video_for_channel(channel_url)
+        video_id, video_url = fetch_latest_video_for_channel(channel_url)  # ✅ подаваме `channel_url`
 
         if video_id:
-            add_video_to_db(video_id, video_url, channel_id, user_id)
+            add_video_to_db(video_id, video_url, channel_url, user_id)  # ✅ подаваме `channel_url`
 
     videos = get_latest_videos()
 
@@ -201,8 +201,8 @@ def run_comment_bot():
         return
 
     for video_id, video_url, channel_id, user_id in videos:
-        # ✅ Проверяваме дали вече сме коментирали това видео
-        if has_already_commented(video_id):
+        # ✅ Добавяме `user_id`, за да съответства на `has_already_commented(video_id, user_id)`
+        if has_already_commented(video_id, user_id):
             logger.info(f"🚫 Пропускаме {video_url}, защото вече сме коментирали.")
             continue  # 🚀 Ако вече е коментирано, пропускаме
 

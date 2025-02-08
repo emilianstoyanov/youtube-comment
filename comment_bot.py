@@ -2,6 +2,7 @@ import os
 import json
 import random
 import logging
+import asyncio
 import psycopg2
 import datetime
 import googleapiclient.discovery
@@ -33,7 +34,7 @@ if not TELEGRAM_CHAT_ID:
 SCOPES = ["https://www.googleapis.com/auth/youtube.force-ssl"]
 
 
-def send_telegram_summary(commented_videos):
+async def send_telegram_summary(commented_videos):
     """📩 Изпраща обобщение на потребителя в Telegram след коментиране на видеа."""
     if not TELEGRAM_CHAT_ID:
         logger.warning("⚠️ TELEGRAM_CHAT_ID не е зададен! Пропускаме известието.")
@@ -315,7 +316,7 @@ def run_comment_bot():
 
     # ✅ Ако има коментирани видеа, изпращаме съобщение
     if commented_videos:
-        send_telegram_summary(commented_videos)
+        asyncio.run(send_telegram_summary(commented_videos))
 
 
 if __name__ == "__main__":

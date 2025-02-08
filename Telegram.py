@@ -30,9 +30,30 @@ def connect_db():
     return psycopg2.connect(DATABASE_URL, sslmode='require')
 
 
+# def get_channel_id_from_handle(handle):
+#     """Конвертира YouTube handle (@Supernaturalee) в истински Channel ID"""
+#     try:
+#         request = youtube.channels().list(
+#             part="id",
+#             forHandle=handle
+#         )
+#         response = request.execute()
+#
+#         if "items" in response and len(response["items"]) > 0:
+#             return response["items"][0]["id"]
+#         else:
+#             logger.warning(f"⚠️ Не намерихме канал за handle: {handle}")
+#             return None
+#     except HttpError as e:
+#         logger.error(f"❌ Грешка при извличане на Channel ID за handle {handle}: {e}")
+#         return None
+
 def get_channel_id_from_handle(handle):
     """Конвертира YouTube handle (@Supernaturalee) в истински Channel ID"""
     try:
+        # Премахваме "@" отпред, ако съществува
+        handle = handle.lstrip("@")
+
         request = youtube.channels().list(
             part="id",
             forHandle=handle
@@ -49,34 +70,88 @@ def get_channel_id_from_handle(handle):
         return None
 
 
+# async def add_channel(update: Update, context: CallbackContext) -> None:
+#     """Добавяне на нов YouTube канал"""
+#     user_id = update.message.from_user.id
+#     username = update.message.from_user.username
+#
+#     if len(context.args) < 2:
+#         await update.message.reply_text(
+#             "⚠️ Моля, добавете **име на канала** и **URL на канала**!\n"
+#             "📌 Пример: `/add_channel KreteKlizmi https://www.youtube.com/@KreteKlizmi`")
+#         return
+#
+#     channel_name = context.args[0]
+#     channel_url = context.args[1]
+#
+#     if "youtube.com/@" in channel_url:
+#         handle = channel_url.split("@")[1]
+#         channel_id = get_channel_id_from_handle(handle)
+#     else:
+#         channel_id = channel_url
+#
+#     if not channel_id or not channel_id.startswith("UC"):
+#         await update.message.reply_text("❌ Неуспешно извличане на Channel ID. Уверете се, че URL е правилен!")
+#         return
+#
+#     try:
+#         conn = connect_db()
+#         cursor = conn.cursor()
+#
+#         cursor.execute("SELECT id FROM users WHERE telegram_id = %s", (user_id,))
+#         user = cursor.fetchone()
+#
+#         if not user:
+#             cursor.execute("INSERT INTO users (telegram_id, username) VALUES (%s, %s) RETURNING id",
+#                            (user_id, username))
+#             user_id = cursor.fetchone()[0]
+#             conn.commit()
+#
+#         cursor.execute("INSERT INTO channels (channel_name, channel_url, user_id) VALUES (%s, %s, %s)",
+#                        (channel_name, channel_id, user_id))
+#         conn.commit()
+#
+#         cursor.close()
+#         conn.close()
+#
+#         await update.message.reply_text(
+#             f"✅ Каналът **{channel_name}** беше добавен успешно!\n🔗 Channel ID: `{channel_id}`",
+#             parse_mode="Markdown", disable_web_page_preview=True)
+#
+#     except Exception as e:
+#         await update.message.reply_text(f"❌ Грешка при добавяне на канала: {e}")
+
+
 async def add_channel(update: Update, context: CallbackContext) -> None:
-    """Добавяне на нов YouTube канал"""
     user_id = update.message.from_user.id
     username = update.message.from_user.username
 
     if len(context.args) < 2:
         await update.message.reply_text(
-            "⚠️ Моля, добавете **име на канала** и **URL на канала**!\n"
-            "📌 Пример: `/add_channel KreteKlizmi https://www.youtube.com/@KreteKlizmi`")
+            "⚠️ Моля, добавете **име на канала** и **URL на канала**! 📌 Пример: `/add_channel KreteKlizmi https://www.youtube.com/@KreteKlizmi`"
+        )
         return
 
-    channel_name = context.args[0]
-    channel_url = context.args[1]
+    channel_name = context.args[0]  # Името на канала
+    channel_url = context.args[1]  # Линк към канала
 
+    # ✅ Ако URL съдържа "@", значи е handle
     if "youtube.com/@" in channel_url:
-        handle = channel_url.split("@")[1]
+        handle = channel_url.split("@")[-1]  # Взимаме само handle-а
         channel_id = get_channel_id_from_handle(handle)
     else:
-        channel_id = channel_url
+        channel_id = channel_url  # Ако вече е Channel ID
 
+    # ✅ Проверяваме дали channel_id е валиден
     if not channel_id or not channel_id.startswith("UC"):
-        await update.message.reply_text("❌ Неуспешно извличане на Channel ID. Уверете се, че URL е правилен!")
+        await update.message.reply_text("❌ Грешка: Неуспешно извличане на Channel ID. Уверете се, че URL е правилен!")
         return
 
     try:
         conn = connect_db()
         cursor = conn.cursor()
 
+        # ✅ Проверяваме дали потребителят съществува
         cursor.execute("SELECT id FROM users WHERE telegram_id = %s", (user_id,))
         user = cursor.fetchone()
 
@@ -86,6 +161,7 @@ async def add_channel(update: Update, context: CallbackContext) -> None:
             user_id = cursor.fetchone()[0]
             conn.commit()
 
+        # ✅ Добавяме канала с реалното Channel ID
         cursor.execute("INSERT INTO channels (channel_name, channel_url, user_id) VALUES (%s, %s, %s)",
                        (channel_name, channel_id, user_id))
         conn.commit()
@@ -95,7 +171,8 @@ async def add_channel(update: Update, context: CallbackContext) -> None:
 
         await update.message.reply_text(
             f"✅ Каналът **{channel_name}** беше добавен успешно!\n🔗 Channel ID: `{channel_id}`",
-            parse_mode="Markdown", disable_web_page_preview=True)
+            parse_mode="Markdown", disable_web_page_preview=True
+        )
 
     except Exception as e:
         await update.message.reply_text(f"❌ Грешка при добавяне на канала: {e}")

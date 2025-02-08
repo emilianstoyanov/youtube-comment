@@ -1,9 +1,9 @@
 ## YouTube Auto Comment Bot + Telegram Integration / Автоматизиран YouTube Коментар Бот с Телеграм
 
-🔹 **Ако срещнете проблеми със сетъпа или имате въпроси, можете да се свържете с мен:**
 
-🔹 **If you encounter problems with the setup or have any questions, you can contact me:**  
-📧 Email: emilian.stoyanov@outlook.com
+🔹 **If you encounter problems with the setup or have any questions, you can contact me: / Ако срещнете проблеми със сетъпа или имате въпроси, можете да се свържете с мен:**  
+📧 Email: your-email@example.com  
+
 ---
 
 ## 📌 **Contents / Съдържание**

@@ -132,8 +132,10 @@ async def list_channels(update: Update, context: CallbackContext) -> None:
             channel_link = f"https://www.youtube.com/channel/{channel_id}"
 
             message += (
-                f"🔹 **{name}**  -->>> 🔗 [Посети канала]({channel_link})\n\n"
-                f"📅 **Добавен на:** `{formatted_date}` с **ID:** `{channel_id}`\n\n"
+                f"🔹 **{name}**\n"
+                f"   🆔 **ID:** `{channel_id}`\n"
+                f"   📅 **Добавен:** `{formatted_date}`\n"
+                f"   🔗 [Посети канала]({channel_link})\n"
                 f"────────────────────────\n"
             )
 

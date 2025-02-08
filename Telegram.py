@@ -1,4 +1,5 @@
 import logging
+import datetime
 from telegram import Update
 from telegram.ext import Application, CommandHandler, CallbackContext
 import psycopg2
@@ -242,7 +243,7 @@ async def help_command(update: Update, context: CallbackContext) -> None:
         "📅 **Филтриране на коментари по дата:**\n"
         "`/comments_from_date <YYYY-MM-DD>`\n"
         "_Показва всички коментари, публикувани на конкретна дата._\n\n"
-        
+
         "ℹ️ **Още функции ще бъдат добавени скоро... 🚀**"
     )
 
@@ -292,40 +293,55 @@ async def already_commented_videos(update: Update, context: CallbackContext) -> 
 
 
 async def comments_from_date(update: Update, context: CallbackContext) -> None:
-    """🔍 Филтрира коментарите по конкретна дата"""
+    """📅 Листва коментари само за конкретна дата, като запазва формата от /already_commented_videos"""
     user_id = update.message.from_user.id
 
     if len(context.args) < 1:
         await update.message.reply_text(
-            "⚠️ Моля, въведи дата във формат `YYYY-MM-DD`. 📅\nПример: `/comments_from_date 2025-02-08`")
+            "⚠️ Моля, въведете дата в правилния формат: `/comments_from_date YYYY-MM-DD`\n"
+            "📌 Например: `/comments_from_date 2025-02-08`"
+        )
         return
 
-    date_filter = context.args[0]
+    date_str = context.args[0]
+
+    # ✅ Проверка дали датата е валидна
+    try:
+        target_date = datetime.datetime.strptime(date_str, "%Y-%m-%d").date()
+    except ValueError:
+        await update.message.reply_text("❌ Грешен формат на датата! Използвайте `/comments_from_date YYYY-MM-DD`.")
+        return
 
     try:
         conn = connect_db()
         cursor = conn.cursor()
 
         cursor.execute("""
-            SELECT videos.video_url, videos.video_id, posted_comments.comment_text, posted_comments.commented_at
+            SELECT videos.video_url, posted_comments.video_title, posted_comments.channel_name, posted_comments.comment_text, posted_comments.commented_at
             FROM posted_comments
             JOIN videos ON posted_comments.video_id = videos.video_id
             WHERE posted_comments.user_id = %s AND DATE(posted_comments.commented_at) = %s
             ORDER BY posted_comments.commented_at DESC
-        """, (user_id, date_filter))
+        """, (user_id, target_date))
 
         comments = cursor.fetchall()
-
         cursor.close()
         conn.close()
 
         if not comments:
-            await update.message.reply_text(f"🚫 Няма намерени коментари за {date_filter}.")
+            await update.message.reply_text(f"ℹ️ Няма коментари за {date_str}.")
             return
 
-        message = f"📅 **Коментари от {date_filter}:**\n\n"
-        for video_url, video_id, comment_text, commented_at in comments:
-            message += f"🎬 [Видео]({video_url})\n📢 **Коментар:** \"{comment_text}\"\n🕒 {commented_at}\n\n"
+        # ✅ Форматираме съобщението
+        message = f"📅 **Коментари от {date_str}:**\n\n"
+        for video_url, video_title, channel_name, comment_text, commented_at in comments:
+            message += (
+                f"🎬 **Видео:** [{video_title}]({video_url})\n"
+                f"📺 **Канал:** {channel_name}\n"
+                f"💬 **Коментар:** {comment_text}\n"
+                f"🕒 **Дата и час:** {commented_at.strftime('%Y-%m-%d %H:%M:%S')}\n"
+                f"────────────────────────\n"
+            )
 
         await update.message.reply_text(message, parse_mode="Markdown", disable_web_page_preview=True)
 

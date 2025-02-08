@@ -239,6 +239,10 @@ async def help_command(update: Update, context: CallbackContext) -> None:
         "`/already_commented_videos`\n"
         "_Показва списък с всички видеа, които ботът вече е коментирал._\n\n"
 
+        "📅 **Филтриране на коментари по дата:**\n"
+        "`/comments_from_date <YYYY-MM-DD>`\n"
+        "_Показва всички коментари, публикувани на конкретна дата._\n\n"
+        
         "ℹ️ **Още функции ще бъдат добавени скоро... 🚀**"
     )
 
@@ -287,6 +291,48 @@ async def already_commented_videos(update: Update, context: CallbackContext) -> 
         await update.message.reply_text(f"❌ Грешка при извличане на коментираните видеа: {e}")
 
 
+async def comments_from_date(update: Update, context: CallbackContext) -> None:
+    """🔍 Филтрира коментарите по конкретна дата"""
+    user_id = update.message.from_user.id
+
+    if len(context.args) < 1:
+        await update.message.reply_text(
+            "⚠️ Моля, въведи дата във формат `YYYY-MM-DD`. 📅\nПример: `/comments_from_date 2025-02-08`")
+        return
+
+    date_filter = context.args[0]
+
+    try:
+        conn = connect_db()
+        cursor = conn.cursor()
+
+        cursor.execute("""
+            SELECT videos.video_url, videos.video_id, posted_comments.comment_text, posted_comments.commented_at
+            FROM posted_comments
+            JOIN videos ON posted_comments.video_id = videos.video_id
+            WHERE posted_comments.user_id = %s AND DATE(posted_comments.commented_at) = %s
+            ORDER BY posted_comments.commented_at DESC
+        """, (user_id, date_filter))
+
+        comments = cursor.fetchall()
+
+        cursor.close()
+        conn.close()
+
+        if not comments:
+            await update.message.reply_text(f"🚫 Няма намерени коментари за {date_filter}.")
+            return
+
+        message = f"📅 **Коментари от {date_filter}:**\n\n"
+        for video_url, video_id, comment_text, commented_at in comments:
+            message += f"🎬 [Видео]({video_url})\n📢 **Коментар:** \"{comment_text}\"\n🕒 {commented_at}\n\n"
+
+        await update.message.reply_text(message, parse_mode="Markdown", disable_web_page_preview=True)
+
+    except Exception as e:
+        await update.message.reply_text(f"❌ Грешка при извличане на коментарите: {e}")
+
+
 def main() -> None:
     application = Application.builder().token(TELEGRAM_TOKEN).build()
 
@@ -296,6 +342,7 @@ def main() -> None:
     application.add_handler(CommandHandler("list_channels", list_channels))
     application.add_handler(CommandHandler("remove_channel", remove_channel))
     application.add_handler(CommandHandler("already_commented_videos", already_commented_videos))
+    application.add_handler(CommandHandler("comments_from_date", comments_from_date))
     # application.add_handler(CommandHandler("add_video", add_video))
 
     application.run_polling()

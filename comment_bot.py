@@ -1,14 +1,16 @@
 import os
 import json
-import psycopg2
 import random
-import googleapiclient.discovery
-from google_auth_oauthlib.flow import InstalledAppFlow
-from googleapiclient.errors import HttpError
-from google.auth.transport.requests import Request
-from google.oauth2.credentials import Credentials
 import logging
+import psycopg2
+import datetime
+import googleapiclient.discovery
+from telegram import Bot
 from dotenv import load_dotenv
+from googleapiclient.errors import HttpError
+from google.oauth2.credentials import Credentials
+from google.auth.transport.requests import Request
+from google_auth_oauthlib.flow import InstalledAppFlow
 
 # ✅ Логове за дебъгване
 logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s")
@@ -19,13 +21,44 @@ load_dotenv()
 DATABASE_URL = os.getenv("DATABASE_URL")
 GOOGLE_CREDENTIALS = os.getenv("GOOGLE_CREDENTIALS")
 REFRESH_TOKEN = os.getenv("YOUTUBE_REFRESH_TOKEN")
+TELEGRAM_CHAT_ID = os.getenv("TELEGRAM_CHAT_ID")
 
 if not DATABASE_URL:
     raise ValueError("❌ Грешка: DATABASE_URL не е зададен!")
 if not GOOGLE_CREDENTIALS:
     raise ValueError("❌ Грешка: GOOGLE_CREDENTIALS не е зададен!")
+if not TELEGRAM_CHAT_ID:
+    raise ValueError("❌ Грешка: TELEGRAM_CHAT_ID не е зададен!")
 
 SCOPES = ["https://www.googleapis.com/auth/youtube.force-ssl"]
+
+
+def send_telegram_summary(commented_videos):
+    """📩 Изпраща обобщение на потребителя в Telegram след коментиране на видеа."""
+    if not TELEGRAM_CHAT_ID:
+        logger.warning("⚠️ TELEGRAM_CHAT_ID не е зададен! Пропускаме известието.")
+        return
+
+    try:
+        bot = Bot(token=TELEGRAM_CHAT_ID)  # Инициализираме бота
+
+        message = "📢 **Дневен отчет за коментари**\n\n"
+        message += f"📅 Дата: {datetime.datetime.now().strftime('%Y-%m-%d')}\n"
+        message += f"💬 Общо коментирани видеа: {len(commented_videos)}\n\n"
+
+        for index, (video_url, comment_text) in enumerate(commented_videos, start=1):
+            message += (
+                f"🎬 **Видео {index}:** [{video_url}]({video_url})\n"
+                f"💬 **Коментар:** {comment_text}\n"
+                f"────────────────────────\n"
+            )
+
+        # ✅ Изпращаме съобщението към потребителя в Telegram
+        bot.send_message(chat_id=TELEGRAM_CHAT_ID, text=message, parse_mode="Markdown", disable_web_page_preview=True)
+        logger.info("📩 Изпратено известие в Telegram!")
+
+    except Exception as e:
+        logger.error(f"❌ Грешка при изпращане на известие в Telegram: {e}")
 
 
 def get_authenticated_service():
@@ -244,18 +277,17 @@ def get_channel_id_from_db(channel_url):
 
 
 def run_comment_bot():
-    """Основна логика на бота"""
+    """Основна логика на бота - проверява нови видеа, коментира ги и изпраща отчет в Telegram"""
     channels = get_channels_from_db()
+    commented_videos = []  # ✅ Събира коментираните видеа за дневното известие
 
     for channel_url, user_id in channels:
         logger.info(f"🔍 Проверяваме за нови видеа в канал {channel_url}...")
 
-        # ✅ Намерете channel_id от базата
         channel_id = get_channel_id_from_db(channel_url)
-
         if not channel_id:
             logger.warning(f"⚠️ Пропускаме {channel_url}, защото няма съответстващ channel_id.")
-            continue  # Пропускаме този канал
+            continue
 
         video_id, video_url = fetch_latest_video_for_channel(channel_url)
 
@@ -264,19 +296,26 @@ def run_comment_bot():
 
             if is_new_video:
                 comments = [
-                    "Страхотно видео! 🔥", "Браво, много добро съдържание! 👌", "Този контент е супер полезен! 🚀",
-                    "Топ! 🔥", "👌👌👌", "🔥🔥🔥", "cool! 🚀", "Продължавай в същия дух! 🙌",
-                    " 🙌 🙌 🙌 ", " Благодаря! 👌"
+                    "Страхотно видео! 🔥",
+                    "Браво, много добро съдържание! 👌",
+                    "Този контент е супер полезен! 🚀",
+                    "Топ! 🔥",
+                    "👌👌👌",
+                    "🔥🔥🔥",
+                    "cool! 🚀",
+                    "Продължавай в същия дух! 🙌",
+                    " 🙌 🙌 🙌 ",
+                    " Благодаря! 👌",
                 ]
                 comment_text = random.choice(comments)
 
-                # ✅ Поправено: Добавяме `user_id` в извикването на `post_comment`
                 if post_comment(youtube, video_id, comment_text, user_id):
                     logger.info(f"✅ Коментар публикуван: {comment_text} на {video_url}")
-                else:
-                    logger.warning(f"⚠️ Неуспешен опит за коментиране на {video_url}.")
-            else:
-                logger.info(f"🚫 Видеото {video_url} вече е в базата. Пропускаме коментар.")
+                    commented_videos.append((video_url, comment_text))  # ✅ Записваме видео за известието
+
+    # ✅ Ако има коментирани видеа, изпращаме съобщение
+    if commented_videos:
+        send_telegram_summary(commented_videos)
 
 
 if __name__ == "__main__":

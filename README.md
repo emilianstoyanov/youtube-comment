@@ -53,3 +53,82 @@
     GOOGLE_CREDENTIALS='{"installed": {"client_id": "...", "client_secret": "...", "redirect_uris": ["..."]}}'
     YOUTUBE_REFRESH_TOKEN=your-youtube-refresh-token
 ```
+
+## 4️⃣ Създаване на база данни (PostgreSQL)
+
+```bash
+    CREATE TABLE users (
+        id SERIAL PRIMARY KEY,
+        telegram_id BIGINT UNIQUE NOT NULL,
+        username TEXT
+    );
+    
+    CREATE TABLE channels (
+        id SERIAL PRIMARY KEY,
+        channel_name TEXT NOT NULL,
+        channel_url TEXT UNIQUE NOT NULL,
+        user_id INTEGER REFERENCES users(id) ON DELETE CASCADE
+    );
+    
+    CREATE TABLE videos (
+        id SERIAL PRIMARY KEY,
+        channel_id INTEGER REFERENCES channels(id) ON DELETE CASCADE,
+        video_id TEXT UNIQUE NOT NULL,
+        video_url TEXT NOT NULL,
+        user_id INTEGER REFERENCES users(id) ON DELETE CASCADE,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    );
+    
+    CREATE TABLE posted_comments (
+        id SERIAL PRIMARY KEY,
+        video_id TEXT REFERENCES videos(video_id) ON DELETE CASCADE,
+        user_id INTEGER REFERENCES users(id) ON DELETE CASCADE,
+        comment_text TEXT NOT NULL,
+        commented_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    );
+```
+
+## 5️⃣ Генериране на YouTube API OAuth 2.0 Client ID
+
+1. Влез в **Google Cloud Console**
+2. Отиди в **API & Services > Credentials**
+3. Натисни **Create Credentials > OAuth Client ID**
+4. Избери **Desktop App**
+5. Изтегли JSON файла и запиши съдържанието му в `.env` като `GOOGLE_CREDENTIALS`
+
+## Настройка на Telegram бота
+
+**Локално стартиране**
+
+```python
+    python comment_bot.py
+```
+
+**Стартиране на Telegram бота**
+
+```python
+    python telegram_bot.py
+```
+
+# 📜 Команди в Telegram
+
+
+| Команда                         | Описание                                        |
+|---------------------------------|------------------------------------------------|
+| `/start`                        | Приветства потребителя и обяснява функциите на бота |
+| `/help`                         | Показва всички команди                         |
+| `/add_channel <име> <URL>`      | Добавя YouTube канал за следене               |
+| `/list_channels`                | Показва всички добавени канали                 |
+| `/remove_channel <Channel ID>`  | Премахва канал от базата                       |
+| `/already_commented_videos`     | Листва всички коментирани видеа                |
+
+
+___________________________________________________________________
+
+
+
+
+
+
+
+

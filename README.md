@@ -47,8 +47,8 @@ Telegram бот, където потребителят може да добав�
 ## 1️⃣ Clone the Repository / Клониране на репото
 
 ```bash
-    git clone https://github.com/yourrepo/youtube-comment-bot.git
-    cd youtube-comment-bot
+    git clone https://github.com/emilianstoyanov/youtube-comment
+    cd youtube-comment
 ```
 
 ## 2️⃣ Create a .env File / Създаване на .env файл

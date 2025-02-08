@@ -55,7 +55,8 @@ async def send_telegram_summary(commented_videos):
             )
 
         # ✅ Изпращаме съобщението към потребителя в Telegram
-        bot.send_message(chat_id=TELEGRAM_CHAT_ID, text=message, parse_mode="Markdown", disable_web_page_preview=True)
+        await bot.send_message(chat_id=TELEGRAM_CHAT_ID, text=message, parse_mode="Markdown",
+                               disable_web_page_preview=True)
         logger.info("📩 Изпратено известие в Telegram!")
 
     except Exception as e:

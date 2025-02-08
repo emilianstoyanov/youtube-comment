@@ -22,6 +22,7 @@ load_dotenv()
 DATABASE_URL = os.getenv("DATABASE_URL")
 GOOGLE_CREDENTIALS = os.getenv("GOOGLE_CREDENTIALS")
 REFRESH_TOKEN = os.getenv("YOUTUBE_REFRESH_TOKEN")
+load_dotenv()
 TELEGRAM_CHAT_ID = os.getenv("TELEGRAM_CHAT_ID")
 
 if not DATABASE_URL:

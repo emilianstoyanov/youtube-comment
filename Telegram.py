@@ -102,16 +102,22 @@ async def add_channel(update: Update, context: CallbackContext) -> None:
 
 
 async def list_channels(update: Update, context: CallbackContext) -> None:
-    """📋 Извежда списък с всички добавени канали от потребителя"""
+    """📋 Извежда списък с всички добавени канали от потребителя с по-добър формат и повече информация."""
     user_id = update.message.from_user.id
 
     try:
         conn = connect_db()
         cursor = conn.cursor()
 
-        cursor.execute("SELECT channel_name, channel_url FROM channels WHERE user_id = %s", (user_id,))
-        channels = cursor.fetchall()
+        # ✅ Взимаме канали с допълнителна информация
+        cursor.execute("""
+            SELECT channel_name, channel_url, created_at 
+            FROM channels 
+            WHERE user_id = %s
+            ORDER BY created_at DESC
+        """, (user_id,))
 
+        channels = cursor.fetchall()
         cursor.close()
         conn.close()
 
@@ -119,9 +125,18 @@ async def list_channels(update: Update, context: CallbackContext) -> None:
             await update.message.reply_text("⚠️ Все още нямаш добавени канали.")
             return
 
-        message = "📂 **Твоите канали:**\n\n"
-        for index, (name, url) in enumerate(channels, start=1):
-            message += f"🔹 **{name}** - [{url}](https://www.youtube.com/channel/{url})\n"
+        # ✅ Подобрено форматиране на съобщението
+        message = "📂 **Твоите YouTube канали:**\n\n"
+        for index, (name, url, created_at) in enumerate(channels, start=1):
+            formatted_date = created_at.strftime("%Y-%m-%d %H:%M:%S")  # Форматираме датата красиво
+            channel_link = f"https://www.youtube.com/channel/{url}"
+
+            message += (
+                f"🔹 **{name}**\n"
+                f"   📅 **Добавен:** `{formatted_date}`\n"
+                f"   🔗 [Посети канала]({channel_link})\n"
+                f"────────────────────────\n"
+            )
 
         await update.message.reply_text(message, parse_mode="Markdown", disable_web_page_preview=True)
 

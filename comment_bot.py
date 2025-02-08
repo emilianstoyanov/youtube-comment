@@ -23,12 +23,17 @@ DATABASE_URL = os.getenv("DATABASE_URL")
 GOOGLE_CREDENTIALS = os.getenv("GOOGLE_CREDENTIALS")
 REFRESH_TOKEN = os.getenv("YOUTUBE_REFRESH_TOKEN")
 load_dotenv()
+TELEGRAM_TOKEN = os.getenv("TELEGRAM_TOKEN")
+load_dotenv()
 TELEGRAM_CHAT_ID = os.getenv("TELEGRAM_CHAT_ID")
+
 
 if not DATABASE_URL:
     raise ValueError("❌ Грешка: DATABASE_URL не е зададен!")
 if not GOOGLE_CREDENTIALS:
     raise ValueError("❌ Грешка: GOOGLE_CREDENTIALS не е зададен!")
+if not TELEGRAM_TOKEN:
+    raise ValueError("❌ Грешка: TELEGRAM_TOKEN не е зададен!")
 if not TELEGRAM_CHAT_ID:
     raise ValueError("❌ Грешка: TELEGRAM_CHAT_ID не е зададен!")
 
@@ -37,12 +42,12 @@ SCOPES = ["https://www.googleapis.com/auth/youtube.force-ssl"]
 
 async def send_telegram_summary(commented_videos):
     """📩 Изпраща обобщение на потребителя в Telegram след коментиране на видеа."""
-    if not TELEGRAM_CHAT_ID:
-        logger.warning("⚠️ TELEGRAM_CHAT_ID не е зададен! Пропускаме известието.")
+    if not TELEGRAM_CHAT_ID or not TELEGRAM_TOKEN:
+        logger.warning("⚠️ TELEGRAM_CHAT_ID или TELEGRAM_TOKEN не са зададени! Пропускаме известието.")
         return
 
     try:
-        bot = Bot(token=TELEGRAM_CHAT_ID)  # Инициализираме бота
+        bot = Bot(token=TELEGRAM_TOKEN)  # ✅ Поправено, използваме TELEGRAM_TOKEN!
 
         message = "📢 **Дневен отчет за коментари**\n\n"
         message += f"📅 Дата: {datetime.datetime.now().strftime('%Y-%m-%d')}\n"

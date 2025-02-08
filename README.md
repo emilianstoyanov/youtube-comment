@@ -2,7 +2,7 @@
 
 
 🔹 **If you encounter problems with the setup or have any questions, you can contact me: / Ако срещнете проблеми със сетъпа или имате въпроси, можете да се свържете с мен:**  
-📧 Email: your-email@example.com  
+📧 Email: emilian.stoyanov@outlook.com  
 
 ---
 

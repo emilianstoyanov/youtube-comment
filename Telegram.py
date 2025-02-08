@@ -102,16 +102,16 @@ async def add_channel(update: Update, context: CallbackContext) -> None:
 
 
 async def list_channels(update: Update, context: CallbackContext) -> None:
-    """📋 Извежда списък с всички добавени канали от потребителя с по-добър формат и повече информация."""
+    """📋 Извежда списък с всички добавени канали от потребителя, включително Channel ID за по-лесно управление."""
     user_id = update.message.from_user.id
 
     try:
         conn = connect_db()
         cursor = conn.cursor()
 
-        # ✅ Взимаме канали с допълнителна информация
+        # ✅ Взимаме каналите с ID, име, URL и дата на добавяне
         cursor.execute("""
-            SELECT channel_name, channel_url, created_at 
+            SELECT channel_name, channel_url, id, created_at 
             FROM channels 
             WHERE user_id = %s
             ORDER BY created_at DESC
@@ -125,15 +125,16 @@ async def list_channels(update: Update, context: CallbackContext) -> None:
             await update.message.reply_text("⚠️ Все още нямаш добавени канали.")
             return
 
-        # ✅ Подобрено форматиране на съобщението
+        # ✅ Подобрено форматиране с ID на канала
         message = "📂 **Твоите YouTube канали:**\n\n"
-        for index, (name, url, created_at) in enumerate(channels, start=1):
-            formatted_date = created_at.strftime("%Y-%m-%d %H:%M:%S")  # Форматираме датата красиво
-            channel_link = f"https://www.youtube.com/channel/{url}"
+        for index, (name, channel_id, db_id, created_at) in enumerate(channels, start=1):
+            formatted_date = created_at.strftime("%Y-%m-%d %H:%M:%S")  # Форматираме датата
+            channel_link = f"https://www.youtube.com/channel/{channel_id}"
 
             message += (
-                f"🔹 **{name}**\n"
-                f"   📅 **Добавен:** `{formatted_date}`\n"
+                f"🔹 **{name}**\n\n"
+                f"   🆔 **ID:** `{channel_id}`\n\n"
+                f"   📅 **Добавен:** `{formatted_date}`\n\n"
                 f"   🔗 [Посети канала]({channel_link})\n"
                 f"────────────────────────\n"
             )

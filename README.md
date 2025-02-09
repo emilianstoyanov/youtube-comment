@@ -1,6 +1,15 @@
 ## YouTube Auto Comment Bot + Telegram Integration / Автоматизиран YouTube Коментар Бот с Телеграм
 
 
+<img src="https://github.com/user-attachments/assets/b5932215-b3ae-42c1-88ad-f32d755be0dc" height="250">
+<img src="https://github.com/user-attachments/assets/4d597bd8-9bde-4345-af43-c97ebd69f72a" height="250">
+<img src="https://github.com/user-attachments/assets/32b34d63-2ac2-4ea8-85fc-106c2ce42f80" height="250">
+<img src="https://github.com/user-attachments/assets/1a0508d9-bb5e-4a0d-b8c3-0417d957f72c" width="500">
+
+
+
+
+
 🔹 **If you encounter problems with the setup or have any questions, you can contact me: / Ако срещнете проблеми със сетъпа или имате въпроси, можете да се свържете с мен:**  
 📧 Email: emilian.stoyanov@outlook.com  
 

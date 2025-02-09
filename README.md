@@ -8,13 +8,22 @@
 
 ## 📌 **Contents / Съдържание**
 
-1. [How It Works? / Как работи?](#how-it-works--как-работи)
+1. [How It Works? / Как работи?](#🚀-how-it-works--как-работи)
 2. [Installation & Setup / Инсталация и настройка](#installation--setup--инсталация-и-настройка)
     - [1️⃣ Clone the Repository / Клониране на репото](#1️⃣-clone-the-repository--клониране-на-репото)
     - [2️⃣ Create a .env File / Създаване на .env файл](#2️⃣-create-a-env-file--създаване-на-env-файл)
     - [3️⃣ Create the Database (PostgreSQL) / Създаване на база данни (PostgreSQL)](#3️⃣-create-the-database-postgresql--създаване-на-база-данни-postgresql)
     - [4️⃣ Generate YouTube API OAuth 2.0 Client ID / Генериране на YouTube API OAuth 2.0 Client ID](#4️⃣-generate-youtube-api-oauth-20-client-id--генериране-на-youtube-api-oauth-20-client-id)
-    - [Telegram Bot Setup / Настройка на Telegram бота](#telegram-bot-setup--настройка-на-telegram-бота)
+    - [5️⃣ Deploying the Bot on Heroku / Разгръщане на бота в Heroku](#5️⃣-deploying-the-bot-on-heroku--разгръщане-на-бота-в-heroku)
+        - [1️⃣ Creating a Heroku Account / Създаване на Heroku акаунт](#1️⃣-creating-a-heroku-account--създаване-на-heroku-акаунт)
+        - [2️⃣ Installing Heroku CLI / Инсталиране на Heroku CLI](#2️⃣-installing-heroku-cli--инсталиране-на-heroku-cli)
+        - [3️⃣ Creating a New Heroku Project / Създаване на нов Heroku проект](#3️⃣-creating-a-new-heroku-project--създаване-на-нов-heroku-проект)
+        - [4️⃣ Adding Heroku Git Remote / Добавяне на Heroku Git Remote](#4️⃣-adding-heroku-git-remote--добавяне-на-heroku-git-remote)
+    - [6️⃣ Setting Up the Database on Heroku / Настройка на база данни в Heroku](#6️⃣-setting-up-the-database-on-heroku--настройка-на-база-данни-в-heroku)
+    - [7️⃣ Adding API Keys in Heroku / Добавяне на API ключове в Heroku](#7️⃣-adding-api-keys-in-heroku--добавяне-на-api-ключове-в-heroku)
+    - [8️⃣ Setting Up Heroku Scheduler / Настройка на Heroku Scheduler](#8️⃣-setting-up-heroku-scheduler--настройка-на-heroku-scheduler)
+    - [9️⃣ Deploying the Bot to Heroku / Деплой на бота в Heroku](#9️⃣-deploying-the-bot-to-heroku--деплой-на-бота-в-heroku)
+    - [🔟 Logs & Monitoring / Логове и мониторинг](#🔟-logs--monitoring--логове-и-мониторинг)
 3. [Telegram Commands / Команди в Telegram](#telegram-commands--команди-в-telegram)
 4. [Potential Errors & Solutions / Потенциални грешки и решения](#potential-errors--solutions--потенциални-грешки-и-решения)
 
